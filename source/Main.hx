@@ -360,9 +360,6 @@ class Main {
                 var t = tParams.at(i).value;
                 var constraint = t.constraint();
                 var constraintStr = genType(constraint);
-                if (constraintStr.startsWith("~")) {
-                    constraintStr = "Dynamic";
-                }
 
                 tParamsLocal.push('${t.string()}: ${constraintStr}');
             }
@@ -404,7 +401,7 @@ class Main {
             items.push(
                 if (ret) genType(v.type());
                 else if (varadic && isLastArg) n + ": haxe.Rest<" + genType(typeAs(v.type(), Slice).elem()) + ">";
-                else n + ": " + genType(v.type())
+                else sanitize(n) + ": " + genType(v.type())
             );
         }
 
@@ -435,8 +432,7 @@ class Main {
             var typeParams = typeAs(t, Named).typeArgs().value;
             var typeParamStrs = [];
             for (i in 0...typeParams.len()) {
-                var r = genType(typeParams.at(i));
-                typeParamStrs.push(r.startsWith("~") ? "Dynamic" : r);
+                typeParamStrs.push(genType(typeParams.at(i)));
             }
 
             var typeParamStart = s.indexOf('[');
@@ -478,10 +474,10 @@ class Main {
             case "complex64": "go.Complex64";
             case "comparable": "go.Comparable";
 
-            case _ if (s.startsWith("chan ")): 'go.Chan<${genType(typeAs(t, Chan).elem())}>';
-            case _ if (s.startsWith("<-chan ")): 'go.Chan<${genType(typeAs(t, Chan).elem())}>';
-            case _ if (s.startsWith("[]")): 'go.Slice<${genType(typeAs(t, Slice).elem())}>';
-            case _ if (s.startsWith("*")): 'go.Pointer<${genType(typeAs(t, PointerType).elem())}>';
+            case _ if (s.substr(0, 5) == "chan "): 'go.Chan<${genType(typeAs(t, Chan).elem())}>';
+            case _ if (s.substr(0, 7) == "<-chan "): 'go.Chan<${genType(typeAs(t, Chan).elem())}>';
+            case _ if (s.substr(0, 2) == "[]"): 'go.Slice<${genType(typeAs(t, Slice).elem())}>';
+            case _ if (s.substr(0, 1) == "*"): 'go.Pointer<${genType(typeAs(t, PointerType).elem())}>';
 
             case _ if (s.replace(" ", "").startsWith("struct{")): {
                 // TODO: generate struct type
@@ -499,8 +495,13 @@ class Main {
                 genFunc('', sig, false, true);
             }
 
+            // TODO: fixed size array (e.g. [5]int)
             case _ if (s.contains(".")): resolvePath(s);
             case _: t.string();
+        }
+
+        if (q.charAt(0) == "~") {
+            q = "Dynamic"; // Todo: ~T[] -> go.Slice<Dynamic> and not go.Slice<T>
         }
 
         return q + tParamStr;
