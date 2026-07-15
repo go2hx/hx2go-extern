@@ -12,6 +12,7 @@ import std.go.packages.Packages;
 import go.Pointer;
 import std.go.os.Os;
 import std.go.types.Types.Var;
+import std.go.types.Types.Named;
 
 class Main {
 
@@ -50,7 +51,7 @@ class Main {
         };
 
         var entries = Packages.load(config, lib).sure();
-        var outputs: Map<String, { staticFunctions: StringBuf, instanceFunctions: StringBuf, staticVars: StringBuf, instanceVars: StringBuf }> = new Map();
+        var outputs: Map<String, { paramStr: String, staticFunctions: StringBuf, instanceFunctions: StringBuf, staticVars: StringBuf, instanceVars: StringBuf }> = new Map();
 
         function getOutput(name: String) {
             if (!outputs.exists(name)) {
@@ -58,7 +59,8 @@ class Main {
                     staticFunctions: new StringBuf(),
                     instanceFunctions: new StringBuf(),
                     staticVars: new StringBuf(),
-                    instanceVars: new StringBuf()
+                    instanceVars: new StringBuf(),
+                    paramStr: ''
                 };
             }
 
@@ -80,7 +82,28 @@ class Main {
                 Syntax.code("switch {0}.(type) {", obj); // this is so bad :[
                 Syntax.code("case *types.TypeName:"); {
                     var type = typeAs(obj, TypeName);
+                    var isNamed = isNamedType(type.type());
                     var buf = getOutput(obj.name());
+
+                    if (isNamed) {
+                        var named = typeAs(type.type(), Named);
+
+                        var tp = named.typeParams();
+                        if (tp != null) {
+                            var params = [];
+                            var tps = tp.value;
+
+                            for (i in 0...tps.len()) {
+                                var t = tps.at(i).value;
+                                var constraint = t.constraint();
+                                var constraintStr = genType(constraint);
+                                params.push('${t.string()}: ${constraintStr}');
+                            }
+
+                            buf.paramStr = params.length == 0 ? "" : "<" + params.join(", ") + ">";
+                        }
+
+                    }
                 }
 
                 Syntax.code("case *types.Func:"); {
@@ -123,7 +146,7 @@ class Main {
             buf.add('package go.${lib.replace("/", ".")};\n');
             buf.add('\n');
             buf.add('@:go.Type({ name: "${file}", instanceName: "${lib.split("/").pop()}.${file}", imports: ["${lib}"] })\n');
-            buf.add('extern class ${toPascalCase(file)} {\n\n');
+            buf.add('extern class ${toPascalCase(file)}${out.paramStr} {\n\n');
             buf.add(out.staticVars.toString());
             buf.add(out.instanceVars.toString());
             buf.add('\n');
@@ -174,9 +197,16 @@ class Main {
         if (tParams != null){
             var tParamsLocal = [];
             for (i in 0...tParams.len()) {
-                tParamsLocal.push(tParams.at(i));
+                var t = tParams.at(i).value;
+                var constraint = t.constraint();
+                var constraintStr = genType(constraint);
+                if (constraintStr.startsWith("~")) {
+                    constraintStr = "Dynamic";
+                }
+
+                tParamsLocal.push('${t.string()}: ${constraintStr}');
             }
-            tParamsStr = '<' + tParamsLocal.map(t -> t.value.string()).join(", ") + '>';
+            tParamsStr = '<' + tParamsLocal.join(", ") + '>';
         }
 
         return '${meta}${topLevel && !closure ? "static " : ""}${closure ? "" : 'function ${toHaxeCase(name)}'}${tParamsStr}(${params.join(", ")})${closure ? ' -> ' : ': '}${results.len() == 0 ? "Void" :genResults(results)}${closure ? "" : ";"}';
@@ -238,10 +268,35 @@ class Main {
         return 'go.${path.replace("/", ".")}'; // TODO: this is a stub
     }
 
+    static function isNamedType(t:std.go.types.Types.Type): Bool {
+        var isNamed = false;
+        Syntax.code("if _, ntOk := t.(*types.Named); ntOk { isNamed = true; }");
+
+        return isNamed;
+    }
+
     static function genType(t: std.go.types.Types.Type): String {
         var s = t.string();
+        var tParamStr = '';
 
-        return switch s {
+        if (isNamedType(t) && typeAs(t, Named).typeParams() != null) {
+            var typeParams = typeAs(t, Named).typeArgs().value;
+            var typeParamStrs = [];
+            for (i in 0...typeParams.len()) {
+                var r = genType(typeParams.at(i));
+                typeParamStrs.push(r.startsWith("~") ? "Dynamic" : r);
+            }
+
+            var typeParamStart = s.indexOf('[');
+            var typeParamEnd = s.lastIndexOf(']');
+            if (typeParamStart != -1 && typeParamEnd != -1 && typeParamEnd > typeParamStart) {
+                s = s.substr(0, typeParamStart) + s.substr(typeParamEnd + 1);
+            }
+
+            tParamStr = '<' + typeParamStrs.join(", ") + '>';
+        }
+
+        var q = switch s {
             case "error": "go.Error";
             case "string": "String";
             case "bool": "Bool";
@@ -285,7 +340,7 @@ class Main {
             case _: t.string();
         }
 
-        return s;
+        return q + tParamStr;
     }
 }
 
