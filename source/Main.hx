@@ -67,6 +67,7 @@ class Main {
                 Syntax.code("switch {0}.(type) {", obj); // this is so bad :[
                     Syntax.code("case *types.TypeName:"); {
                         var type = typeAs(obj, TypeName);
+                        var buf = getOutput(obj.name());
                     }
 
                     Syntax.code("case *types.Func:"); {
@@ -87,8 +88,9 @@ class Main {
                         var v = typeAs(obj, Var);
                         var buf = getOutput(entry.value.name).staticVars;
                         var name = v.name();
+                        var type = v.type();
 
-                        buf.add('    static var ${name};');
+                        buf.add('    static var ${name}: ${genType(type)};\n');
                     }
 
                     Syntax.code("default:"); {
@@ -185,7 +187,7 @@ class Main {
 
             items.push(
                 if (ret) genType(v.type());
-                else if (varadic && isLastArg) n + ": ..." + genType(typeAs(v.type(), Slice).elem());
+                else if (varadic && isLastArg) n + ": haxe.Rest<" + genType(typeAs(v.type(), Slice).elem()) + ">";
                 else n + ": " + genType(v.type())
             );
         }
