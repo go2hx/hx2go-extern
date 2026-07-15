@@ -17,6 +17,8 @@ import std.go.os.exec.Cmd;
 import std.go.os.exec.Exec;
 import go.Go;
 import std.go.types.Types.Interface;
+import std.go.types.Types.Alias;
+using StringTools;
 
 class Main {
 
@@ -158,6 +160,18 @@ class Main {
         return t;
     }
 
+    static function isBasicType(t:std.go.types.Types.Type):Bool {
+        var result = false;
+
+        Syntax.code("
+            if _, ok := t.(*types.Basic); ok {
+                result = true;
+            }
+        ");
+
+        return result;
+    }
+
     static function genLib(lib: String, output: String): Void {
         if (didGen.exists(lib)) {
             return;
@@ -172,7 +186,7 @@ class Main {
         };
 
         var entries = Packages.load(config, lib).sure();
-        var outputs: Map<String, { isInterface: Bool, paramStr: String, staticFunctions: StringBuf, instanceFunctions: StringBuf, staticVars: StringBuf, instanceVars: StringBuf }> = new Map();
+        var outputs: Map<String, { typedefStr: Null<String>, consts: StringBuf, isInterface: Bool, paramStr: String, staticFunctions: StringBuf, instanceFunctions: StringBuf, staticVars: StringBuf, instanceVars: StringBuf }> = new Map();
 
         function getOutput(name: String) {
             if (!outputs.exists(name)) {
@@ -181,8 +195,10 @@ class Main {
                     instanceFunctions: new StringBuf(),
                     staticVars: new StringBuf(),
                     instanceVars: new StringBuf(),
+                    consts: new StringBuf(),
                     paramStr: '',
-                    isInterface: false
+                    isInterface: false,
+                    typedefStr: null
                 };
             }
 
@@ -207,6 +223,12 @@ class Main {
                     var out = getOutput(obj.name());
                     var underlying = getUnderlying(type.type());
 
+                    var resolvedTo = std.go.types.Types.Types.unalias(type.type());
+                    if (resolvedTo == type.type() && isNamedType(resolvedTo)) {
+                        var named = typeAs(resolvedTo, Named);
+                        resolvedTo = named.underlying();
+                    }
+
                     if (isInterfaceType(underlying)) {
                         var iface = typeAs(underlying, Interface);
                         out.isInterface = true;
@@ -222,6 +244,8 @@ class Main {
                             var sig = method.signature().value;
                             out.instanceFunctions.add('    ${genFunc(method.name(), sig, false, false)}\n');
                         }
+                    } else if (type.isAlias() && (isNamedType(resolvedTo) || isBasicType(resolvedTo))) { // TODO: support for func() aswell (see iter.Seq)
+                        out.typedefStr = genType(resolvedTo);
                     } else {
                         var isNamed = isNamedType(type.type());
                         var out = getOutput(obj.name());
@@ -287,6 +311,21 @@ class Main {
                     buf.add('    @:native("${name}") static var ${sanitize(name)}: ${genType(type)};\n');
                 }
 
+                Syntax.code("case *types.Const:"); {
+                    var c = typeAs(obj, std.go.types.Types.Const);
+
+                    if (!c.exported()) {
+                        continue;
+                    }
+
+                    var buf = getOutput(entry.value.name).consts;
+
+                    var name = c.name();
+                    var type = c.type();
+
+                    buf.add('    @:native("${name}") static var ${sanitize(name)}: ${genType(type)};\n');
+                }
+
                 Syntax.code("default:"); {
                     // trace(go.reflect.Reflect.typeOf(obj).string());
                 }
@@ -304,14 +343,22 @@ class Main {
             buf.add('package go.${lib.replace("/", ".")};\n');
             buf.add('\n');
             buf.add('@:go.Type({ name: "${file}", instanceName: "${lib.split("/").pop()}.${file}", imports: ["${lib}"] })\n');
-            buf.add('extern ${out.isInterface ? "typedef" : "class"} ${toPascalCase(file)}${out.paramStr}${out.isInterface ? " =" : ""} {\n\n');
-            buf.add(out.staticVars.toString());
-            buf.add(out.instanceVars.toString());
-            if (out.staticVars.length > 0 || out.instanceVars.length > 0) buf.add('\n');
-            buf.add(out.staticFunctions.toString());
-            buf.add(out.instanceFunctions.toString());
-            if (out.staticFunctions.length > 0 || out.instanceFunctions.length > 0) buf.add("\n");
-            buf.add("}");
+            buf.add('extern ${out.isInterface || out.typedefStr != null ? "typedef" : "class"} ${toPascalCase(file)}${out.paramStr}${out.isInterface || out.typedefStr != null ? " = " : " "}');
+
+            if (out.typedefStr != null) {
+                buf.add(out.typedefStr);
+            } else {
+                buf.add('{\n\n');
+                buf.add(out.consts.toString());
+                if (out.consts.length > 0) buf.add('\n');
+                buf.add(out.staticVars.toString());
+                buf.add(out.instanceVars.toString());
+                if (out.staticVars.length > 0 || out.instanceVars.length > 0) buf.add('\n');
+                buf.add(out.staticFunctions.toString());
+                buf.add(out.instanceFunctions.toString());
+                if (out.staticFunctions.length > 0 || out.instanceFunctions.length > 0) buf.add("\n");
+                buf.add("}");
+            }
 
             Os.mkdirAll('${output}/go/${lib}', Syntax.code("0775"));
             Os.writeFile('${output}/go/${lib}/${toPascalCase(file)}.hx', cast buf.toString(), Syntax.code("0666"));
@@ -431,7 +478,7 @@ class Main {
         var s = t.string();
         var tParamStr = '';
 
-        if (isNamedType(t) && typeAs(t, Named).typeParams() != null) {
+        if (isNamedType(t) && typeAs(t, Named).typeArgs() != null) {
             var typeParams = typeAs(t, Named).typeArgs().value;
             var typeParamStrs = [];
             for (i in 0...typeParams.len()) {
@@ -445,6 +492,10 @@ class Main {
             }
 
             tParamStr = '<' + typeParamStrs.join(", ") + '>';
+        }
+
+        if (s.startsWith("untyped ")) {
+            s = s.substr(8);
         }
 
         var q = switch s {

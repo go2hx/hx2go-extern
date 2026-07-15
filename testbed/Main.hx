@@ -5,9 +5,11 @@ import go.encoding.json.Json;
 import go.bytes.Bytes;
 import go.Pointer;
 import go.Map;
+import go.os.Os;
+import go.Syntax;
 
 function handler(w: ResponseWriter, req: Pointer<Request>): Void {
-    w.write("Hello, World!");
+    w.write(Std.string(req.userAgent()));
 }
 
 function httpServer() {
@@ -28,5 +30,6 @@ function jsonDecoder() {
 }
 
 function main() {
-    jsonDecoder();
+//    jsonDecoder();
+//    httpServer();
 }
