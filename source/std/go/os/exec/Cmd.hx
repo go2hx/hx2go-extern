@@ -1,6 +1,6 @@
 package std.go.os.exec;
 
-@:go.Type({ name: "Cmd", instanceName: "os/exec.Cmd", imports: ["os/exec"] })
+@:go.Type({ name: "Cmd", instanceName: "exec.Cmd", imports: ["os/exec"] })
 extern class Cmd {
-    public function output(): Void;
+    function output(): go.Result<go.Slice<go.Byte>>;
 }

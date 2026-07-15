@@ -1,0 +1,2 @@
+Compile.hxml
+--cmd go -C ./binary/go2hx/main run . "*" "/home/mikaib/Documents/go2hx-v2/output"

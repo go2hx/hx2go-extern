@@ -1,4 +1,4 @@
 -cp source
 -main Main
 -L hx2go
---custom-target go=binary
+--custom-target go=binary/go2hx
