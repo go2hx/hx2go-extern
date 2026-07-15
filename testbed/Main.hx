@@ -18,13 +18,30 @@ import go.Byte;
 import go.Go;
 import go2hx.os.exec.Cmd;
 import go2hx.os.Exec;
+import go2hx.Bufio;
+import go2hx.bufio.Scanner;
+import go2hx.Strings;
+import go2hx.encoding.Hex;
+import go2hx.crypto.Sha256;
 
 function handler(w: ResponseWriter, req: Pointer<Request>): Void {
-    w.write(Std.string(req.userAgent()));
+    var buf = new StringBuf();
+    var url = req.URL; // TODO: will import net/url, but unused if doing req.URL.query().encode()
+
+    buf.add('User agent: ${req.userAgent()}\n');
+    buf.add('Params: ${url.query().encode()}\n');
+
+    w.write(buf.toString());
+
+    Syntax.go(() -> {
+        Sys.sleep(1);
+        Sys.exit(0);
+    });
 }
 
 function httpTest() {
     Http.handleFunc("/", handler);
+    trace("http server is listening, please navigate to :8080");
     Http.listenAndServe(":8080", null);
 }
 
@@ -106,10 +123,32 @@ function commandTest() {
     trace(out);
 }
 
+
+function hashTest() {
+    var data = "hello go2hx";
+    var sum = Sha256.sum256(data);
+    var encoded = Hex.encodeToString(sum.slice(0, sum.length));
+    trace(encoded);
+}
+
+function scannerTest() {
+    var reader = Strings.newReader("line one\nline two\nline three\n");
+    var scanner: Pointer<Scanner> = Bufio.newScanner(reader);
+    var lines: Array<String> = [];
+    while (scanner.value.scan()) {
+        lines.push(scanner.value.text());
+    }
+    for (l in lines) {
+        trace(l);
+    }
+}
+
 function main() {
-//    jsonTest();
-//    httpTest();
-//    imageTest();
-//    tcpTest();
-//    commandTest();
+    jsonTest();
+    imageTest();
+    tcpTest();
+    commandTest();
+    hashTest();
+    scannerTest();
+    httpTest();
 }

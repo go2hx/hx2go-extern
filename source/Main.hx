@@ -84,7 +84,7 @@ class Main {
     }
 
     public static function toHaxeCase(input: String): String {
-        return input.charAt(0).toLowerCase() + input.substr(1);
+        return input == input.toUpperCase() ? input : input.charAt(0).toLowerCase() + input.substr(1);
     }
 
     public static function toPascalCase(input: String): String {
