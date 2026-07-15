@@ -2,7 +2,5 @@
 -cp output
 -main Main
 -L hx2go
--D go-lib=fmt
--D go-lib=os
 --custom-target go=binary/testbed
 --cmd go -C ./binary/testbed/main run .

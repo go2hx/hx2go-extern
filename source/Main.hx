@@ -18,11 +18,17 @@ import std.go.os.exec.Exec;
 import go.Go;
 import std.go.types.Types.Interface;
 import std.go.types.Types.Alias;
+import std.go.types.Types.Struct;
+import go.haxe.HxArray;
+import go.haxe.HxDynamic;
+import std.go.types.Types.Array as ArrayType;
+
 using StringTools;
 
 class Main {
 
     public static var didGen: Map<String, Bool> = new Map();
+    public static var topLevelName: String = "go2hx";
 
     static function sanitize(name:String):String {
         return switch (name) {
@@ -172,6 +178,30 @@ class Main {
         return result;
     }
 
+    static function isStructType(t:std.go.types.Types.Type):Bool {
+        var result = false;
+
+        Syntax.code("
+        if _, ok := t.(*types.Struct); ok {
+            result = true;
+        }
+    ");
+
+        return result;
+    }
+
+    static function isArrayType(t:std.go.types.Types.Type):Bool {
+        var result = false;
+
+        Syntax.code("
+        if _, ok := t.(*types.Array); ok {
+            result = true;
+        }
+    ");
+
+        return result;
+    }
+
     static function genLib(lib: String, output: String): Void {
         if (didGen.exists(lib)) {
             return;
@@ -186,9 +216,13 @@ class Main {
         };
 
         var entries = Packages.load(config, lib).sure();
-        var outputs: Map<String, { typedefStr: Null<String>, consts: StringBuf, isInterface: Bool, paramStr: String, staticFunctions: StringBuf, instanceFunctions: StringBuf, staticVars: StringBuf, instanceVars: StringBuf }> = new Map();
+        var outputs: Map<String, { ctorParams: Array<String>, isStruct: Bool, typedefStr: Null<String>, consts: StringBuf, isInterface: Bool, paramStr: String, staticFunctions: StringBuf, instanceFunctions: StringBuf, staticVars: StringBuf, instanceVars: StringBuf }> = new Map();
 
         function getOutput(name: String) {
+            if (name == lib.split("/").pop()) {
+                name = "@package";
+            }
+
             if (!outputs.exists(name)) {
                 outputs[name] = {
                     staticFunctions: new StringBuf(),
@@ -198,6 +232,8 @@ class Main {
                     consts: new StringBuf(),
                     paramStr: '',
                     isInterface: false,
+                    isStruct: false,
+                    ctorParams: [],
                     typedefStr: null
                 };
             }
@@ -252,6 +288,23 @@ class Main {
 
                         if (isNamed) {
                             var named = typeAs(type.type(), Named);
+
+                            if (isStructType(underlying)) {
+                                out.isStruct = true;
+                                var struct = typeAs(underlying, Struct);
+
+                                for (i in 0...struct.numFields()) {
+                                    var field = typeAs(struct.field(i), Var);
+                                    if (!field.exported()) {
+                                        continue;
+                                    }
+
+                                    var fname = field.name();
+                                    var p = '${sanitize(toHaxeCase(fname))}: ${genType(field.type())}';
+                                    out.instanceVars.add('    @:native("${fname}") var ${p};\n');
+                                    out.ctorParams.push(p);
+                                }
+                            }
 
                             var tp = named.typeParams();
                             if (tp != null) {
@@ -339,9 +392,21 @@ class Main {
         for (file in outputs.keys()) {
             var buf = new StringBuf();
             var out = outputs[file];
+            var isPkg = false;
+            var relLib = lib;
 
-            buf.add('package go.${lib.replace("/", ".")};\n');
+            if (file == "@package") {
+                var parts = lib.split("/");
+                file = (parts.pop() : String);
+                relLib = parts.join("/");
+                isPkg = true;
+            }
+
+            buf.add('package ${topLevelName}${relLib.length > 0 ? "." + relLib.replace("/", ".") : ""};\n');
             buf.add('\n');
+            if (out.isStruct == true) {
+                buf.add('@:structInit\n'); // TODO: generate constructor where everything is optional
+            }
             buf.add('@:go.Type({ name: "${file}", instanceName: "${lib.split("/").pop()}.${file}", imports: ["${lib}"] })\n');
             buf.add('extern ${out.isInterface || out.typedefStr != null ? "typedef" : "class"} ${toPascalCase(file)}${out.paramStr}${out.isInterface || out.typedefStr != null ? " = " : " "}');
 
@@ -354,14 +419,18 @@ class Main {
                 buf.add(out.staticVars.toString());
                 buf.add(out.instanceVars.toString());
                 if (out.staticVars.length > 0 || out.instanceVars.length > 0) buf.add('\n');
+                if (out.ctorParams.length > 0) {
+                    buf.add('function new(${out.ctorParams.join(", ")});\n\n');
+                }
+
                 buf.add(out.staticFunctions.toString());
                 buf.add(out.instanceFunctions.toString());
                 if (out.staticFunctions.length > 0 || out.instanceFunctions.length > 0) buf.add("\n");
                 buf.add("}");
             }
 
-            Os.mkdirAll('${output}/go/${lib}', Syntax.code("0775"));
-            Os.writeFile('${output}/go/${lib}/${toPascalCase(file)}.hx', cast buf.toString(), Syntax.code("0666"));
+            Os.mkdirAll('${output}/${topLevelName}/${relLib}', Syntax.code("0775"));
+            Os.writeFile('${output}/${topLevelName}/${relLib}/${toPascalCase(file)}.hx', cast buf.toString(), Syntax.code("0666"));
         }
     }
 
@@ -464,7 +533,7 @@ class Main {
     }
 
     static function resolvePath(path: String): String {
-        return 'go.${path.replace("/", ".")}'; // TODO: this is a stub
+        return '${topLevelName}.${path.replace("/", ".")}'; // TODO: this is a stub
     }
 
     static function isNamedType(t:std.go.types.Types.Type): Bool {
@@ -504,18 +573,19 @@ class Main {
             case "bool": "Bool";
             case "any": "Dynamic";
 
-            case "int": "Int";
+            case "int": "go.GoInt";
             case "int64": "go.Int64";
             case "int32": "go.Int32";
             case "int16": "go.Int16";
             case "int8": "go.Int8";
 
-            case "uint": "go.UInt";
+            case "uint": "go.GoUInt";
             case "uint64": "go.UInt64";
             case "uint32": "go.UInt32";
             case "uint16": "go.UInt16";
             case "uint8": "go.UInt8";
 
+            case "float": "Float"; // can happen in the case of untyped types apparently
             case "float64": "Float";
             case "float32": "go.Float32";
             case "float16": "go.Float16";
@@ -528,6 +598,7 @@ class Main {
             case "complex64": "go.Complex64";
             case "comparable": "go.Comparable";
 
+            case _ if (s.substr(0, 7) == "chan<- "): 'go.Chan<${genType(typeAs(t, Chan).elem())}>';
             case _ if (s.substr(0, 5) == "chan "): 'go.Chan<${genType(typeAs(t, Chan).elem())}>';
             case _ if (s.substr(0, 7) == "<-chan "): 'go.Chan<${genType(typeAs(t, Chan).elem())}>';
             case _ if (s.substr(0, 2) == "[]"): 'go.Slice<${genType(typeAs(t, Slice).elem())}>';
@@ -549,9 +620,13 @@ class Main {
                 genFunc('', sig, false, true);
             }
 
-            // TODO: fixed size array (e.g. [5]int)
+            case _ if (isArrayType(t)): {
+                var arr = typeAs(t, ArrayType);
+                'go.GoArray<${genType(arr.elem())}, ${arr.len()}>';
+            }
+
             case _ if (s.contains(".")): resolvePath(s);
-            case _: t.string();
+            case _: s;
         }
 
         if (q.charAt(0) == "~") {
