@@ -442,7 +442,7 @@ class Main {
         return '';
     }
 
-    static function genFunc(name: String, sig: Signature, topLevel:Bool, closure: Bool = false, genMeta: Bool = true) {
+    static function genFunc(name: String, sig: Signature, topLevel:Bool, closure: Bool = false) {
         var recv = sig.recv();
         var params = sig.params()?.value ?? null;
         var results = sig.results()?.value ?? null;
@@ -485,7 +485,7 @@ class Main {
             tParamsStr = '<' + tParamsLocal.join(", ") + '>';
         }
 
-        return '${genMeta ? meta : ""}${topLevel && !closure ? "static " : ""}${closure ? "" : 'function ${sanitize(toHaxeCase(name))}'}${tParamsStr}(${params.join(", ")})${closure ? ' -> ' : ': '}${results.len() == 0 ? "Void" :genResults(results)}${closure ? "" : ";"}';
+        return '${meta}${topLevel && !closure ? "static " : ""}${closure ? "" : 'function ${sanitize(toHaxeCase(name))}'}${tParamsStr}(${params.join(", ")})${closure ? ' -> ' : ': '}${results.len() == 0 ? "Void" :genResults(results)}${closure ? "" : ";"}';
     }
 
     static function isResultType(args:std.go.types.Types.Tuple) {
