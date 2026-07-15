@@ -28,7 +28,7 @@ func (this *Hx_Obj_haxe_ds__readonlyarray_readonlyarray_impl_) Hx_Field__RTTI() 
 }
 
 func Hx_Field_haxe_ds__readonlyarray_readonlyarray_impl__get_length(this any) int {
-    return Hx_Field_go_haxe_hxdynamic_getArrayLength(this)
+    return ((int)(Hx_Field_go_haxe_hxdynamic_toInt(Hx_Field_go_haxe_hxdynamic_getField(this, "length"))))
 }
 
 func Hx_Field_haxe_ds__readonlyarray_readonlyarray_impl__get(this any, i int) any {

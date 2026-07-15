@@ -718,8 +718,8 @@ func Hx_Field_go_haxe_hxdynamic_call(fn any, args any) any {
         
             var pt reflect.Type = fType.In(i); _ = pt
             var _hx_tmp_3 any; _ = _hx_tmp_3
-            var _hx_tmp_4 int = i; _ = _hx_tmp_4
-            if ((_hx_tmp_4 < Hx_Field_go_haxe_hxdynamic_getArrayLength(args))) {
+            var _hx_tmp_4 any = ((any)(i)); _ = _hx_tmp_4
+            if (Hx_Field_go_haxe_hxdynamic_lt(_hx_tmp_4, Hx_Field_go_haxe_hxdynamic_getField(args, "length"))) {
                 _hx_tmp_3 = Hx_Field_go_haxe_hxdynamic_getArrayIndex(args, i)
             } else {
                 _hx_tmp_3 = nil
@@ -861,7 +861,9 @@ func Hx_Field_go_haxe_hxdynamic_getField(dyn any, fieldName string) any {
     var _hx_tmp_3 reflect.Kind = kind; _ = _hx_tmp_3
     if ((_hx_tmp_3 == reflect.Struct)) {
         var f reflect.Value = value.FieldByName(Hx_Field_go_haxe_hxdynamic_formatField(fieldName)); _ = f
-        if (!f.IsValid()) {
+        if (f.IsValid()) {
+            found = true
+        } else {
             var vtable reflect.Value = value.FieldByName("VTable"); _ = vtable
             if (vtable.IsValid()) {
                 f = vtable.MethodByName(Hx_Field_go_haxe_hxdynamic_formatField(fieldName))

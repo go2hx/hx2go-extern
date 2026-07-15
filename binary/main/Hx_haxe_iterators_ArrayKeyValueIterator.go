@@ -37,8 +37,8 @@ func (this *Hx_Obj_haxe_iterators_arraykeyvalueiterator) Hx_Field__RTTI() *Hx_Ob
 }
 
 func (this *Hx_Obj_haxe_iterators_arraykeyvalueiterator) Hx_Field_hasNext() bool {
-    var _hx_tmp_0 int = this.Hx_Field_current; _ = _hx_tmp_0
-    return (_hx_tmp_0 < Hx_Field_go_haxe_hxdynamic_getArrayLength(this.Hx_Field_array))
+    var _hx_tmp_0 any = ((any)(this.Hx_Field_current)); _ = _hx_tmp_0
+    return ((bool)(Hx_Field_go_haxe_hxdynamic_toBool(Hx_Field_go_haxe_hxdynamic_lt(_hx_tmp_0, Hx_Field_go_haxe_hxdynamic_getField(this.Hx_Field_array, "length")))))
 }
 
 func (this *Hx_Obj_haxe_iterators_arraykeyvalueiterator) Hx_Field_next() any {

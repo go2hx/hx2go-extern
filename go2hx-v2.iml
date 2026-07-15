@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module type="HAXE_MODULE" version="4">
+  <component name="Go" enabled="true" />
   <component name="HaxeModuleSettingsStorage">
     <option name="outputFolder" value="$MODULE_DIR$/../hx2go-v2/out/production/go2hx-v2" />
   </component>
@@ -10,6 +11,7 @@
       <sourceFolder url="file://$MODULE_DIR$/source" isTestSource="false" />
     </content>
     <orderEntry type="inheritedJdk" />
+    <orderEntry type="module" module-name="hx2go-v2-poc" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>

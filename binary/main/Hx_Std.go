@@ -99,8 +99,8 @@ func Hx_Field_std_string(s any) string {
             {
                 var _g int = 0; _ = _g
                 for  {
-                    var _hx_tmp_3 int = _g; _ = _hx_tmp_3
-                    if (!((_hx_tmp_3 < Hx_Field_go_haxe_hxdynamic_getArrayLength(arr)))) {
+                    var _hx_tmp_3 any = ((any)(_g)); _ = _hx_tmp_3
+                    if (!(Hx_Field_go_haxe_hxdynamic_lt(_hx_tmp_3, Hx_Field_go_haxe_hxdynamic_getField(arr, "length")))) {
                         break
                     }
                 

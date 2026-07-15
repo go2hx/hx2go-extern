@@ -11,6 +11,7 @@ import std.go.types.Types.Pointer as PointerType;
 import std.go.packages.Packages;
 import go.Pointer;
 import std.go.os.Os;
+import std.go.types.Types.Var;
 
 class Main {
 
@@ -39,18 +40,16 @@ class Main {
         Sys.println('Writing "$lib" to "$output"');
         
         var entries = Packages.load(config, lib).sure();
-        var outputs: Map<String, StringBuf> = new Map();
+        var outputs: Map<String, { staticFunctions: StringBuf, instanceFunctions: StringBuf, staticVars: StringBuf, instanceVars: StringBuf }> = new Map();
 
         function getOutput(name: String) {
             if (!outputs.exists(name)) {
-                var buf = new StringBuf();
-
-                buf.add('package go.${lib.replace("/", ".")};\n');
-                buf.add('\n');
-                buf.add('@:go.Type({ name: "${name}", instanceName: "${lib.split("/").pop()}.${name}", imports: ["${lib}"] })\n');
-                buf.add('extern class ${toPascalCase(name)} {\n\n');
-
-                outputs[name] = buf;
+                outputs[name] = {
+                    staticFunctions: new StringBuf(),
+                    instanceFunctions: new StringBuf(),
+                    staticVars: new StringBuf(),
+                    instanceVars: new StringBuf()
+                };
             }
 
             return outputs[name];
@@ -67,16 +66,13 @@ class Main {
 
                 Syntax.code("switch {0}.(type) {", obj); // this is so bad :[
                     Syntax.code("case *types.TypeName:"); {
-                        var type: Pointer<TypeName> = cast (obj : Dynamic);
-                        var buf = getOutput(type.value.name());
-
-                        buf.add('');
+                        var type = typeAs(obj, TypeName);
                     }
 
                     Syntax.code("case *types.Func:"); {
-                        var func: Pointer<std.go.types.Types.Func> = cast (obj : Dynamic);
-                        var buf = getOutput(entry.value.name);
-                        var sig = func.value.signature().value;
+                        var func = typeAs(obj, Func);
+                        var buf = getOutput(entry.value.name).staticFunctions;
+                        var sig = func.signature().value;
 
                         // var typeParams = sig.typeParams().value;
                         var recv = sig.recv();
@@ -86,7 +82,15 @@ class Main {
                         
                         buf.add('    ' + genFunc(name, recv, params, results, varadic, recv == null) + '\n');
                     }
-                        
+
+                    Syntax.code("case *types.Var:"); {
+                        var v = typeAs(obj, Var);
+                        var buf = getOutput(entry.value.name).staticVars;
+                        var name = v.name();
+
+                        buf.add('    static var ${name};');
+                    }
+
                     Syntax.code("default:"); {
                         trace(go.reflect.Reflect.typeOf(obj).string());
                     }
@@ -100,10 +104,22 @@ class Main {
         trace('keys', outputs.keys());
 
         for (file in outputs.keys()) {
-            trace('------------- output: $file -------------');
-            outputs[file].add("\n}");
+            var buf = new StringBuf();
+            var out = outputs[file];
+
+            buf.add('package go.${lib.replace("/", ".")};\n');
+            buf.add('\n');
+            buf.add('@:go.Type({ name: "${file}", instanceName: "${lib.split("/").pop()}.${file}", imports: ["${lib}"] })\n');
+            buf.add('extern class ${toPascalCase(file)} {\n\n');
+            buf.add(out.staticVars.toString());
+            buf.add(out.instanceVars.toString());
+            buf.add('\n');
+            buf.add(out.staticFunctions.toString());
+            buf.add(out.instanceFunctions.toString());
+            buf.add("\n}");
+
             trace(Os.mkdirAll('${output}/go/${lib}', Syntax.code("0775")));
-            trace(Os.writeFile('${output}/go/${lib}/${toPascalCase(file)}.hx', cast outputs[file].toString(), Syntax.code("0666")));
+            trace(Os.writeFile('${output}/go/${lib}/${toPascalCase(file)}.hx', cast buf.toString(), Syntax.code("0666")));
         }
 
     }

@@ -39,8 +39,8 @@ func Hx_Field_haxe_log_formatOutput(v any, infos any) string {
         var _g int = 0; _ = _g
         var _g1 any = Hx_Field_go_haxe_hxdynamic_getField(infos, "customParams"); _ = _g1
         for  {
-            var _hx_tmp_1 int = _g; _ = _hx_tmp_1
-            if (!((_hx_tmp_1 < Hx_Field_go_haxe_hxdynamic_getArrayLength(_g1)))) {
+            var _hx_tmp_1 any = ((any)(_g)); _ = _hx_tmp_1
+            if (!(Hx_Field_go_haxe_hxdynamic_lt(_hx_tmp_1, Hx_Field_go_haxe_hxdynamic_getField(_g1, "length")))) {
                 break
             }
         

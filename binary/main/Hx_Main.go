@@ -70,50 +70,21 @@ func Hx_Field_main_main() {
         entries = r
     }
 
-    var outputs map[string]*Hx_Obj_stringbuf = map[string]*Hx_Obj_stringbuf{}; _ = outputs
-    var getOutput func(string) *Hx_Obj_stringbuf = func(name string) *Hx_Obj_stringbuf {
-        var ok bool = false; _ = ok
-        _, ok = outputs[name]
-        if (!ok) {
-            var buf *Hx_Obj_stringbuf = Hx_Obj_stringbuf_CreateInstance(); _ = buf
-            {
-                var x string = (("package go." + Hx_Field_stringtools_replace(lib, "/", ".")) + ";\n"); _ = x
-                var _hx_tmp_3 string = buf.Hx_Field_b; _ = _hx_tmp_3
-                buf.Hx_Field_b = (_hx_tmp_3 + Hx_Field_std_string(x))
+    var outputs map[string]any = map[string]any{}; _ = outputs
+    var getOutput func(string) any = func(name string) any {
+        return func(name string) any {
+            var ok bool = false; _ = ok
+            _, ok = outputs[name]
+            if (!ok) {
+                var _hx_tmp_3 any = ((any)(Hx_Obj_stringbuf_CreateInstance())); _ = _hx_tmp_3
+                var _hx_tmp_4 any = ((any)(Hx_Obj_stringbuf_CreateInstance())); _ = _hx_tmp_4
+                var _hx_tmp_5 any = ((any)(Hx_Obj_stringbuf_CreateInstance())); _ = _hx_tmp_5
+                var value any = any(map[string]any{ "staticFunctions": _hx_tmp_3, "instanceFunctions": _hx_tmp_4, "staticVars": _hx_tmp_5, "instanceVars": ((any)(Hx_Obj_stringbuf_CreateInstance())) }); _ = value
+                outputs[name] = value
             }
         
-            buf.Hx_Field_b = (buf.Hx_Field_b + "\n")
-            {
-                var _this *[]string = Hx_Field_go_haxe_hxstring_split(lib, "/"); _ = _this
-                var data []string = (*_this); _ = data
-                var _hx_tmp_3 int = len(data); _ = _hx_tmp_3
-                var lastIdx int = (_hx_tmp_3 - int(1)); _ = lastIdx
-                var x1 struct { Value string; Valid bool }; _ = x1
-                var _hx_tmp_4 int = lastIdx; _ = _hx_tmp_4
-                if ((_hx_tmp_4 < int(0))) {
-                    x1 = struct { Value string; Valid bool }{}
-                } else {
-                    var last string = data[((int)(lastIdx))]; _ = last
-                    var _hx_tmp_5 *[]string = _this; _ = _hx_tmp_5
-                    (*_hx_tmp_5) = data[:lastIdx]
-                    x1 = struct { Value string; Valid bool }{ Value: last, Valid: true }
-                }
-            
-                var _hx_tmp_5 string = buf.Hx_Field_b; _ = _hx_tmp_5
-                var _hx_tmp_6 string = (("@:go.Type({ name: \"" + name) + "\", instanceName: \""); _ = _hx_tmp_6
-                buf.Hx_Field_b = (_hx_tmp_5 + Hx_Field_std_string(((((((_hx_tmp_6 + x1.Value) + ".") + name) + "\", imports: [\"") + lib) + "\"] })\n")))
-            }
-        
-            {
-                var x2 string = (("extern class " + Hx_Field_main_toPascalCase(name)) + " {\n\n"); _ = x2
-                var _hx_tmp_3 string = buf.Hx_Field_b; _ = _hx_tmp_3
-                buf.Hx_Field_b = (_hx_tmp_3 + Hx_Field_std_string(x2))
-            }
-        
-            outputs[name] = buf
-        }
-    
-        return outputs[name]
+            return outputs[name]
+        }(name)
     }; _ = getOutput
     {
         var self []*packages.Package = entries; _ = self
@@ -151,17 +122,14 @@ func Hx_Field_main_main() {
                 
                     switch obj.(type) {
                     case *types.TypeName:
-                    {
-                        var _hx_reserved_type *types.TypeName = (((any)(obj))).(*types.TypeName); _ = _hx_reserved_type
-                        var buf *Hx_Obj_stringbuf = getOutput((*_hx_reserved_type).Name()); _ = buf
-                        buf.Hx_Field_b = (buf.Hx_Field_b + "")
-                    }
-                
+                    var v *types.TypeName = (((any)(obj))).(*types.TypeName); _ = v
+                    var _hx_reserved_type types.TypeName = (*v); _ = _hx_reserved_type
                     case *types.Func:
                     {
-                        var _hx_reserved_func *types.Func = (((any)(obj))).(*types.Func); _ = _hx_reserved_func
-                        var buf1 *Hx_Obj_stringbuf = getOutput((*entry).Name); _ = buf1
-                        var sig types.Signature = (*(*_hx_reserved_func).Signature()); _ = sig
+                        var v1 *types.Func = (((any)(obj))).(*types.Func); _ = v1
+                        var _hx_reserved_func types.Func = (*v1); _ = _hx_reserved_func
+                        var buf *Hx_Obj_stringbuf = (Hx_Field_go_haxe_hxdynamic_toClass(Hx_Field_go_haxe_hxdynamic_getField(getOutput((*entry).Name), "staticFunctions"), "Hx_Obj_stringbuf")).(*Hx_Obj_stringbuf); _ = buf
+                        var sig types.Signature = (*_hx_reserved_func.Signature()); _ = sig
                         var recv *types.Var = sig.Recv(); _ = recv
                         var tmp *types.Tuple = sig.Params(); _ = tmp
                         var _hx_tmp_9 struct { Value types.Tuple; Valid bool }; _ = _hx_tmp_9
@@ -206,14 +174,24 @@ func Hx_Field_main_main() {
                             var _hx_tmp_17 bool = varadic; _ = _hx_tmp_17
                             var _hx_tmp_18 bool = (recv == nil); _ = _hx_tmp_18
                             var x string = (("    " + Hx_Field_main_genFunc(_hx_tmp_13, _hx_tmp_14, _hx_tmp_15, _hx_tmp_16, _hx_tmp_17, _hx_tmp_18, struct { Value bool; Valid bool }{}.Value)) + "\n"); _ = x
-                            var _hx_tmp_19 string = buf1.Hx_Field_b; _ = _hx_tmp_19
-                            buf1.Hx_Field_b = (_hx_tmp_19 + Hx_Field_std_string(x))
+                            var _hx_tmp_19 string = buf.Hx_Field_b; _ = _hx_tmp_19
+                            buf.Hx_Field_b = (_hx_tmp_19 + Hx_Field_std_string(x))
                         }
+                    }
+                
+                    case *types.Var:
+                    {
+                        var v2 *types.Var = (((any)(obj))).(*types.Var); _ = v2
+                        var v3 types.Var = (*v2); _ = v3
+                        var buf1 *Hx_Obj_stringbuf = (Hx_Field_go_haxe_hxdynamic_toClass(Hx_Field_go_haxe_hxdynamic_getField(getOutput((*entry).Name), "staticVars"), "Hx_Obj_stringbuf")).(*Hx_Obj_stringbuf); _ = buf1
+                        var name1 string = v3.Name(); _ = name1
+                        var _hx_tmp_9 string = buf1.Hx_Field_b; _ = _hx_tmp_9
+                        buf1.Hx_Field_b = (_hx_tmp_9 + Hx_Field_std_string((("    static var " + name1) + ";")))
                     }
                 
                     default:
                     var _hx_tmp_9 string = reflect.TypeOf(obj).String(); _ = _hx_tmp_9
-                    Hx_Field_haxe_log_trace(_hx_tmp_9, any(map[string]any{ "fileName": ((any)("source/Main.hx")), "lineNumber": ((any)(91)), "className": ((any)("Main")), "methodName": ((any)("main")) }))
+                    Hx_Field_haxe_log_trace(_hx_tmp_9, any(map[string]any{ "fileName": ((any)("source/Main.hx")), "lineNumber": ((any)(95)), "className": ((any)("Main")), "methodName": ((any)("main")) }))
                     }
                 }
             }
@@ -234,7 +212,7 @@ func Hx_Field_main_main() {
     var keys []string = make([]string, _hx_tmp_3); _ = keys
     for k := range outputs {keys = append(keys, k)}
 
-    tmp("keys", any(map[string]any{ "fileName": ((any)("source/Main.hx")), "lineNumber": ((any)(100)), "className": ((any)("Main")), "methodName": ((any)("main")), "customParams": &([]any{ ((any)(keys)) }) }))
+    tmp("keys", any(map[string]any{ "fileName": ((any)("source/Main.hx")), "lineNumber": ((any)(104)), "className": ((any)("Main")), "methodName": ((any)("main")), "customParams": &([]any{ ((any)(keys)) }) }))
     {
         var length1 struct { Value int; Valid bool } = struct { Value int; Valid bool }{}; _ = length1
         var _hx_tmp_4 int; _ = _hx_tmp_4
@@ -260,17 +238,52 @@ func Hx_Field_main_main() {
             var _hx_tmp_7 int = file_current; _ = _hx_tmp_7
             file_current = (file_current + 1)
             var file string = (*_hx_tmp_6)[_hx_tmp_7]; _ = file
-            var _hx_tmp_8 string = (("------------- output: " + file) + " -------------"); _ = _hx_tmp_8
-            Hx_Field_haxe_log_trace(_hx_tmp_8, any(map[string]any{ "fileName": ((any)("source/Main.hx")), "lineNumber": ((any)(103)), "className": ((any)("Main")), "methodName": ((any)("main")) }))
-            outputs[file].Hx_Field_b = (outputs[file].Hx_Field_b + "\n}")
-            var _hx_tmp_10 string = ((("" + output) + "/go/") + lib); _ = _hx_tmp_10
-            var _hx_tmp_9 error = os.MkdirAll(_hx_tmp_10, 0775); _ = _hx_tmp_9
-            Hx_Field_haxe_log_trace(_hx_tmp_9, any(map[string]any{ "fileName": ((any)("source/Main.hx")), "lineNumber": ((any)(105)), "className": ((any)("Main")), "methodName": ((any)("main")) }))
-            var _hx_tmp_13 string = (((("" + output) + "/go/") + lib) + "/"); _ = _hx_tmp_13
-            var _hx_tmp_12 string = ((_hx_tmp_13 + Hx_Field_main_toPascalCase(file)) + ".hx"); _ = _hx_tmp_12
-            var _hx_tmp_14 []byte = (([]byte)(outputs[file].Hx_Field_b)); _ = _hx_tmp_14
-            var _hx_tmp_11 error = os.WriteFile(_hx_tmp_12, _hx_tmp_14, 0666); _ = _hx_tmp_11
-            Hx_Field_haxe_log_trace(_hx_tmp_11, any(map[string]any{ "fileName": ((any)("source/Main.hx")), "lineNumber": ((any)(106)), "className": ((any)("Main")), "methodName": ((any)("main")) }))
+            var buf_b string = ""; _ = buf_b
+            var out any = outputs[file]; _ = out
+            var _hx_tmp_8 string = buf_b; _ = _hx_tmp_8
+            buf_b = (_hx_tmp_8 + Hx_Field_std_string((("package go." + Hx_Field_stringtools_replace(lib, "/", ".")) + ";\n")))
+            buf_b = (buf_b + "\n")
+            {
+                var _this *[]string = Hx_Field_go_haxe_hxstring_split(lib, "/"); _ = _this
+                var data []string = (*_this); _ = data
+                var _hx_tmp_9 int = len(data); _ = _hx_tmp_9
+                var lastIdx int = (_hx_tmp_9 - int(1)); _ = lastIdx
+                var x struct { Value string; Valid bool }; _ = x
+                var _hx_tmp_10 int = lastIdx; _ = _hx_tmp_10
+                if ((_hx_tmp_10 < int(0))) {
+                    x = struct { Value string; Valid bool }{}
+                } else {
+                    var last string = data[((int)(lastIdx))]; _ = last
+                    var _hx_tmp_11 *[]string = _this; _ = _hx_tmp_11
+                    (*_hx_tmp_11) = data[:lastIdx]
+                    x = struct { Value string; Valid bool }{ Value: last, Valid: true }
+                }
+            
+                var _hx_tmp_11 string = buf_b; _ = _hx_tmp_11
+                var _hx_tmp_12 string = (("@:go.Type({ name: \"" + file) + "\", instanceName: \""); _ = _hx_tmp_12
+                buf_b = (_hx_tmp_11 + Hx_Field_std_string(((((((_hx_tmp_12 + x.Value) + ".") + file) + "\", imports: [\"") + lib) + "\"] })\n")))
+            }
+        
+            var _hx_tmp_9 string = buf_b; _ = _hx_tmp_9
+            buf_b = (_hx_tmp_9 + Hx_Field_std_string((("extern class " + Hx_Field_main_toPascalCase(file)) + " {\n\n")))
+            var _hx_tmp_10 string = buf_b; _ = _hx_tmp_10
+            buf_b = (_hx_tmp_10 + Hx_Field_std_string(Hx_Field_go_haxe_hxdynamic_getField(Hx_Field_go_haxe_hxdynamic_getField(out, "staticVars"), "b")))
+            var _hx_tmp_11 string = buf_b; _ = _hx_tmp_11
+            buf_b = (_hx_tmp_11 + Hx_Field_std_string(Hx_Field_go_haxe_hxdynamic_getField(Hx_Field_go_haxe_hxdynamic_getField(out, "instanceVars"), "b")))
+            buf_b = (buf_b + "\n")
+            var _hx_tmp_12 string = buf_b; _ = _hx_tmp_12
+            buf_b = (_hx_tmp_12 + Hx_Field_std_string(Hx_Field_go_haxe_hxdynamic_getField(Hx_Field_go_haxe_hxdynamic_getField(out, "staticFunctions"), "b")))
+            var _hx_tmp_13 string = buf_b; _ = _hx_tmp_13
+            buf_b = (_hx_tmp_13 + Hx_Field_std_string(Hx_Field_go_haxe_hxdynamic_getField(Hx_Field_go_haxe_hxdynamic_getField(out, "instanceFunctions"), "b")))
+            buf_b = (buf_b + "\n}")
+            var _hx_tmp_15 string = ((("" + output) + "/go/") + lib); _ = _hx_tmp_15
+            var _hx_tmp_14 error = os.MkdirAll(_hx_tmp_15, 0775); _ = _hx_tmp_14
+            Hx_Field_haxe_log_trace(_hx_tmp_14, any(map[string]any{ "fileName": ((any)("source/Main.hx")), "lineNumber": ((any)(121)), "className": ((any)("Main")), "methodName": ((any)("main")) }))
+            var _hx_tmp_18 string = (((("" + output) + "/go/") + lib) + "/"); _ = _hx_tmp_18
+            var _hx_tmp_17 string = ((_hx_tmp_18 + Hx_Field_main_toPascalCase(file)) + ".hx"); _ = _hx_tmp_17
+            var _hx_tmp_19 []byte = (([]byte)(buf_b)); _ = _hx_tmp_19
+            var _hx_tmp_16 error = os.WriteFile(_hx_tmp_17, _hx_tmp_19, 0666); _ = _hx_tmp_16
+            Hx_Field_haxe_log_trace(_hx_tmp_16, any(map[string]any{ "fileName": ((any)("source/Main.hx")), "lineNumber": ((any)(122)), "className": ((any)("Main")), "methodName": ((any)("main")) }))
         }
     }
 }
