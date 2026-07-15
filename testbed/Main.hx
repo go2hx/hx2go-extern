@@ -1,13 +1,13 @@
 import go.net.http.ResponseWriter;
 import go.net.http.Request;
-import go.Pointer;
 import go.net.http.Http;
 import go.encoding.json.Json;
 import go.bytes.Bytes;
+import go.Pointer;
 import go.Map;
 
 function handler(w: ResponseWriter, req: Pointer<Request>): Void {
-    w.write(cast "Hello, World!");
+    w.write("Hello, World!");
 }
 
 function httpServer() {
@@ -18,11 +18,11 @@ function httpServer() {
 function jsonDecoder() {
     var v = '{ "hello": "world", "num": 123, "boolean": true, "nest": { "a": 1, "b": 2 } }';
     var dec = Json.newDecoder(
-        cast Bytes.newReader(v)
+        Bytes.newReader(v)
     );
 
     var data = new Map<String, Dynamic>();
-    dec.value.decode(Pointer.addressOf(data)).sure();
+    dec.decode(Pointer.addressOf(data)).sure();
 
     trace(data);
 }

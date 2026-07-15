@@ -172,7 +172,7 @@ class Main {
         };
 
         var entries = Packages.load(config, lib).sure();
-        var outputs: Map<String, { paramStr: String, staticFunctions: StringBuf, instanceFunctions: StringBuf, staticVars: StringBuf, instanceVars: StringBuf }> = new Map();
+        var outputs: Map<String, { isInterface: Bool, paramStr: String, staticFunctions: StringBuf, instanceFunctions: StringBuf, staticVars: StringBuf, instanceVars: StringBuf }> = new Map();
 
         function getOutput(name: String) {
             if (!outputs.exists(name)) {
@@ -181,7 +181,8 @@ class Main {
                     instanceFunctions: new StringBuf(),
                     staticVars: new StringBuf(),
                     instanceVars: new StringBuf(),
-                    paramStr: ''
+                    paramStr: '',
+                    isInterface: false
                 };
             }
 
@@ -208,6 +209,8 @@ class Main {
 
                     if (isInterfaceType(underlying)) {
                         var iface = typeAs(underlying, Interface);
+                        out.isInterface = true;
+
                         iface.complete();
 
                         for (i in 0...iface.numMethods()) {
@@ -217,7 +220,7 @@ class Main {
                             }
 
                             var sig = method.signature().value;
-                            out.instanceFunctions.add('    ${genFunc(method.name(), sig, false)}\n');
+                            out.instanceFunctions.add('    ${genFunc(method.name(), sig, false, false)}\n');
                         }
                     } else {
                         var isNamed = isNamedType(type.type());
@@ -301,7 +304,7 @@ class Main {
             buf.add('package go.${lib.replace("/", ".")};\n');
             buf.add('\n');
             buf.add('@:go.Type({ name: "${file}", instanceName: "${lib.split("/").pop()}.${file}", imports: ["${lib}"] })\n');
-            buf.add('extern class ${toPascalCase(file)}${out.paramStr} {\n\n');
+            buf.add('extern ${out.isInterface ? "typedef" : "class"} ${toPascalCase(file)}${out.paramStr}${out.isInterface ? " =" : ""} {\n\n');
             buf.add(out.staticVars.toString());
             buf.add(out.instanceVars.toString());
             if (out.staticVars.length > 0 || out.instanceVars.length > 0) buf.add('\n');
@@ -323,7 +326,7 @@ class Main {
         return '';
     }
 
-    static function genFunc(name: String, sig: Signature, topLevel:Bool, closure: Bool = false) {
+    static function genFunc(name: String, sig: Signature, topLevel:Bool, closure: Bool = false, genMeta: Bool = true) {
         var recv = sig.recv();
         var params = sig.params()?.value ?? null;
         var results = sig.results()?.value ?? null;
@@ -366,7 +369,7 @@ class Main {
             tParamsStr = '<' + tParamsLocal.join(", ") + '>';
         }
 
-        return '${meta}${topLevel && !closure ? "static " : ""}${closure ? "" : 'function ${sanitize(toHaxeCase(name))}'}${tParamsStr}(${params.join(", ")})${closure ? ' -> ' : ': '}${results.len() == 0 ? "Void" :genResults(results)}${closure ? "" : ";"}';
+        return '${genMeta ? meta : ""}${topLevel && !closure ? "static " : ""}${closure ? "" : 'function ${sanitize(toHaxeCase(name))}'}${tParamsStr}(${params.join(", ")})${closure ? ' -> ' : ': '}${results.len() == 0 ? "Void" :genResults(results)}${closure ? "" : ";"}';
     }
 
     static function isResultType(args:std.go.types.Types.Tuple) {
