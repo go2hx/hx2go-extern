@@ -15,6 +15,8 @@ import std.go.types.Types.Var;
 
 class Main {
 
+    public static var didGen: Map<String, Bool> = new Map();
+
     public static function toHaxeCase(input: String): String {
         return input.charAt(0).toLowerCase() + input.substr(1);
     }
@@ -24,10 +26,6 @@ class Main {
     }
 
     public static function main() {
-        var config: Config = {
-            mode: LoadMode.needName.or(LoadMode.needTypes).or(LoadMode.needTypesInfo).or(LoadMode.needSyntax)
-        };
-
         var args = Sys.args();
         if (args.length < 2) {
             Sys.println("Usage: go2hx <lib> <output>");
@@ -37,8 +35,20 @@ class Main {
         var output = args[1];
         var lib = args[0];
 
-        Sys.println('Writing "$lib" to "$output"');
-        
+        genLib(lib, output);
+    }
+
+    static function genLib(lib: String, output: String): Void {
+        if (didGen.exists(lib)) {
+            return;
+        }
+
+        didGen.set(lib, true);
+
+        var config: Config = {
+            mode: LoadMode.needName.or(LoadMode.needTypes).or(LoadMode.needTypesInfo).or(LoadMode.needSyntax).or(LoadMode.needImports)
+        };
+
         var entries = Packages.load(config, lib).sure();
         var outputs: Map<String, { staticFunctions: StringBuf, instanceFunctions: StringBuf, staticVars: StringBuf, instanceVars: StringBuf }> = new Map();
 
@@ -57,6 +67,9 @@ class Main {
 
         for (entry in entries) {
             var scope = entry.value.types.value.scope().value;
+            for (dep in entry.value.imports.keys()) {
+                genLib(dep, output);
+            }
 
             for (name in scope.names()) {
                 var obj = scope.lookup(name);
@@ -65,45 +78,43 @@ class Main {
                 }
 
                 Syntax.code("switch {0}.(type) {", obj); // this is so bad :[
-                    Syntax.code("case *types.TypeName:"); {
-                        var type = typeAs(obj, TypeName);
-                        var buf = getOutput(obj.name());
-                    }
+                Syntax.code("case *types.TypeName:"); {
+                    var type = typeAs(obj, TypeName);
+                    var buf = getOutput(obj.name());
+                }
 
-                    Syntax.code("case *types.Func:"); {
-                        var func = typeAs(obj, Func);
-                        var buf = getOutput(entry.value.name).staticFunctions;
-                        var sig = func.signature().value;
+                Syntax.code("case *types.Func:"); {
+                    var func = typeAs(obj, Func);
+                    var buf = getOutput(entry.value.name).staticFunctions;
+                    var sig = func.signature().value;
 
-                        // var typeParams = sig.typeParams().value;
-                        var recv = sig.recv();
-                        var params = sig.params()?.value ?? null;
-                        var results = sig.results()?.value ?? null;
-                        var varadic = sig.variadic();
-                        
-                        buf.add('    ' + genFunc(name, recv, params, results, varadic, recv == null) + '\n');
-                    }
+                    // var typeParams = sig.typeParams().value;
+                    var recv = sig.recv();
+                    var params = sig.params()?.value ?? null;
+                    var results = sig.results()?.value ?? null;
+                    var varadic = sig.variadic();
 
-                    Syntax.code("case *types.Var:"); {
-                        var v = typeAs(obj, Var);
-                        var buf = getOutput(entry.value.name).staticVars;
-                        var name = v.name();
-                        var type = v.type();
+                    buf.add('    ' + genFunc(name, sig, recv == null) + '\n');
+                }
 
-                        buf.add('    static var ${name}: ${genType(type)};\n');
-                    }
+                Syntax.code("case *types.Var:"); {
+                    var v = typeAs(obj, Var);
+                    var buf = getOutput(entry.value.name).staticVars;
+                    var name = v.name();
+                    var type = v.type();
 
-                    Syntax.code("default:"); {
-                        trace(go.reflect.Reflect.typeOf(obj).string());
-                    }
+                    buf.add('    static var ${name}: ${genType(type)};\n');
+                }
+
+                Syntax.code("default:"); {
+                    // trace(go.reflect.Reflect.typeOf(obj).string());
+                }
 
                 Syntax.code("}");
                 // trace(obj.name(), obj.type().string());
             }
 
         }
-
-        trace('keys', outputs.keys());
 
         for (file in outputs.keys()) {
             var buf = new StringBuf();
@@ -120,10 +131,9 @@ class Main {
             buf.add(out.instanceFunctions.toString());
             buf.add("\n}");
 
-            trace(Os.mkdirAll('${output}/go/${lib}', Syntax.code("0775")));
-            trace(Os.writeFile('${output}/go/${lib}/${toPascalCase(file)}.hx', cast buf.toString(), Syntax.code("0666")));
+            Os.mkdirAll('${output}/go/${lib}', Syntax.code("0775"));
+           Os.writeFile('${output}/go/${lib}/${toPascalCase(file)}.hx', cast buf.toString(), Syntax.code("0666"));
         }
-
     }
 
     static function genPackage(pkg) {
@@ -134,9 +144,15 @@ class Main {
         return '';
     }
 
-    static function genFunc(name: String, recv:Pointer<std.go.types.Types.Var>, params:std.go.types.Types.Tuple, results:std.go.types.Types.Tuple, varadic: Bool, topLevel:Bool, closure: Bool = false) {
+    static function genFunc(name: String, sig: Signature, topLevel:Bool, closure: Bool = false) {
+        var recv = sig.recv();
+        var params = sig.params()?.value ?? null;
+        var results = sig.results()?.value ?? null;
+        var varadic = sig.variadic();
+
         var params = genTuple(params, varadic);
         var meta = "";
+
         if (results.len() > 1 && !isResultType(results) && !closure) {
             var names = [];
             var unnamed = 0;
@@ -153,7 +169,17 @@ class Main {
             meta = '@:go.Tuple(${names.join(", ")}) ';
         }
 
-        return '${meta}${topLevel && !closure ? "static " : ""}${closure ? "" : 'function ${toHaxeCase(name)}'}(${params.join(", ")})${closure ? ' -> ' : ': '}${results.len() == 0 ? "Void" :genResults(results)}${closure ? "" : ";"}';
+        var tParams = sig.typeParams() != null ? sig.typeParams().value : null;
+        var tParamsStr = '';
+        if (tParams != null){
+            var tParamsLocal = [];
+            for (i in 0...tParams.len()) {
+                tParamsLocal.push(tParams.at(i));
+            }
+            tParamsStr = '<' + tParamsLocal.map(t -> t.value.string()).join(", ") + '>';
+        }
+
+        return '${meta}${topLevel && !closure ? "static " : ""}${closure ? "" : 'function ${toHaxeCase(name)}'}${tParamsStr}(${params.join(", ")})${closure ? ' -> ' : ': '}${results.len() == 0 ? "Void" :genResults(results)}${closure ? "" : ";"}';
     }
     
     static function isResultType(args:std.go.types.Types.Tuple) {
@@ -251,7 +277,7 @@ class Main {
             case _ if (s.startsWith("*")): 'go.Pointer<${genType(typeAs(t, PointerType).elem())}>';
             case _ if (s.startsWith('func')): {
                 var sig = typeAs(t, Signature);
-                genFunc('', sig.recv(), sig.params()?.value, sig.results()?.value, sig.variadic(), false, true);
+                genFunc('', sig, false, true);
             }
 
             case _ if (s.contains(".")): resolvePath(s);

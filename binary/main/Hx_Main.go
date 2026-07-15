@@ -2,7 +2,6 @@ package main
 
 import "golang.org/x/tools/go/packages"
 import "go/types"
-import "reflect"
 import "os"
 
 var Hx_Obj_main_RTTI = Hx_Obj_go_haxe_hxclass_CreateInstance(
@@ -32,6 +31,11 @@ func (this *Hx_Obj_main) Hx_Field__RTTI() *Hx_Obj_go_haxe_hxclass {
     return Hx_Obj_main_RTTI
 }
 
+var Hx_Field_main_didGen map[string]bool = Hx_Init_Hx_Field_main_didGen()
+func Hx_Init_Hx_Field_main_didGen() map[string]bool {
+    return map[string]bool{}
+}
+
 func Hx_Field_main_toHaxeCase(input string) string {
     var _hx_tmp_0 string = Hx_Field_go_haxe_hxstring_toLowerCase(Hx_Field_go_haxe_hxstring_charAt(input, 0)); _ = _hx_tmp_0
     var _hx_tmp_1 string = input; _ = _hx_tmp_1
@@ -45,10 +49,6 @@ func Hx_Field_main_toPascalCase(input string) string {
 }
 
 func Hx_Field_main_main() {
-    var _hx_tmp_2 packages.LoadMode = packages.NeedName; _ = _hx_tmp_2
-    var _hx_tmp_1 packages.LoadMode = _hx_tmp_2 | packages.NeedTypes; _ = _hx_tmp_1
-    var _hx_tmp_0 packages.LoadMode = _hx_tmp_1 | packages.NeedTypesInfo; _ = _hx_tmp_0
-    var config packages.Config = packages.Config{ Mode: _hx_tmp_0 | packages.NeedSyntax }; _ = config
     var args *[]string = Hx_Field_sys_args(); _ = args
     if ((len(*args) < 2)) {
         Hx_Field_sys_println("Usage: go2hx <lib> <output>")
@@ -57,7 +57,22 @@ func Hx_Field_main_main() {
 
     var output string = (*args)[1]; _ = output
     var lib string = (*args)[0]; _ = lib
-    Hx_Field_sys_println((((("Writing \"" + lib) + "\" to \"") + output) + "\""))
+    Hx_Field_main_genLib(lib, output)
+}
+
+func Hx_Field_main_genLib(lib string, output string) {
+    var ok bool = false; _ = ok
+    _, ok = Hx_Field_main_didGen[lib]
+    if (ok) {
+        return
+    }
+
+    Hx_Field_main_didGen[lib] = true
+    var _hx_tmp_3 packages.LoadMode = packages.NeedName; _ = _hx_tmp_3
+    var _hx_tmp_2 packages.LoadMode = _hx_tmp_3 | packages.NeedTypes; _ = _hx_tmp_2
+    var _hx_tmp_1 packages.LoadMode = _hx_tmp_2 | packages.NeedTypesInfo; _ = _hx_tmp_1
+    var _hx_tmp_0 packages.LoadMode = _hx_tmp_1 | packages.NeedSyntax; _ = _hx_tmp_0
+    var config packages.Config = packages.Config{ Mode: _hx_tmp_0 | packages.NeedImports }; _ = config
     var hx_result_4 struct { Error error; Result []*packages.Package }; _ = hx_result_4
     hx_result_4.Result, hx_result_4.Error = packages.Load((&config), lib)
     var this1 struct { Error error; Result []*packages.Package } = ((struct { Error error; Result []*packages.Package })(hx_result_4)); _ = this1
@@ -73,13 +88,13 @@ func Hx_Field_main_main() {
     var outputs map[string]any = map[string]any{}; _ = outputs
     var getOutput func(string) any = func(name string) any {
         return func(name string) any {
-            var ok bool = false; _ = ok
-            _, ok = outputs[name]
-            if (!ok) {
-                var _hx_tmp_3 any = ((any)(Hx_Obj_stringbuf_CreateInstance())); _ = _hx_tmp_3
+            var tmp_ok_1 bool = false; _ = tmp_ok_1
+            _, tmp_ok_1 = outputs[name]
+            if (!tmp_ok_1) {
                 var _hx_tmp_4 any = ((any)(Hx_Obj_stringbuf_CreateInstance())); _ = _hx_tmp_4
                 var _hx_tmp_5 any = ((any)(Hx_Obj_stringbuf_CreateInstance())); _ = _hx_tmp_5
-                var value any = any(map[string]any{ "staticFunctions": _hx_tmp_3, "instanceFunctions": _hx_tmp_4, "staticVars": _hx_tmp_5, "instanceVars": ((any)(Hx_Obj_stringbuf_CreateInstance())) }); _ = value
+                var _hx_tmp_6 any = ((any)(Hx_Obj_stringbuf_CreateInstance())); _ = _hx_tmp_6
+                var value any = any(map[string]any{ "staticFunctions": _hx_tmp_4, "instanceFunctions": _hx_tmp_5, "staticVars": _hx_tmp_6, "instanceVars": ((any)(Hx_Obj_stringbuf_CreateInstance())) }); _ = value
                 outputs[name] = value
             }
         
@@ -91,30 +106,60 @@ func Hx_Field_main_main() {
         var _g_current int = 0; _ = _g_current
         var _g_array *[]*packages.Package = (&self); _ = _g_array
         for  {
-            var _hx_tmp_3 int = _g_current; _ = _hx_tmp_3
-            if (!((_hx_tmp_3 < len(*_g_array)))) {
+            var _hx_tmp_4 int = _g_current; _ = _hx_tmp_4
+            if (!((_hx_tmp_4 < len(*_g_array)))) {
                 break
             }
         
-            var _hx_tmp_4 *[]*packages.Package = _g_array; _ = _hx_tmp_4
-            var _hx_tmp_5 int = _g_current; _ = _hx_tmp_5
+            var _hx_tmp_5 *[]*packages.Package = _g_array; _ = _hx_tmp_5
+            var _hx_tmp_6 int = _g_current; _ = _hx_tmp_6
             _g_current = (_g_current + 1)
-            var entry *packages.Package = (*_hx_tmp_4)[_hx_tmp_5]; _ = entry
+            var entry *packages.Package = (*_hx_tmp_5)[_hx_tmp_6]; _ = entry
             var scope types.Scope = (*(*(*entry).Types).Scope()); _ = scope
             {
-                var tmp_self_1 []string = scope.Names(); _ = tmp_self_1
-                var name_current int = 0; _ = name_current
-                var name_array *[]string = (&tmp_self_1); _ = name_array
+                var tmp_this1_1 map[string]*packages.Package = (*entry).Imports; _ = tmp_this1_1
+                var length struct { Value int; Valid bool } = struct { Value int; Valid bool }{}; _ = length
+                var _hx_tmp_7 int; _ = _hx_tmp_7
+                if ((length.Valid != false)) {
+                    _hx_tmp_7 = length.Value
+                } else {
+                    _hx_tmp_7 = 0
+                }
+            
+                var keys []string = make([]string, _hx_tmp_7); _ = keys
+                for k := range tmp_this1_1 {keys = append(keys, k)}
+            
+                var tmp_self_1 []string = keys; _ = tmp_self_1
+                var dep_current int = 0; _ = dep_current
+                var dep_array *[]string = (&tmp_self_1); _ = dep_array
                 for  {
-                    var _hx_tmp_6 int = name_current; _ = _hx_tmp_6
-                    if (!((_hx_tmp_6 < len(*name_array)))) {
+                    var _hx_tmp_8 int = dep_current; _ = _hx_tmp_8
+                    if (!((_hx_tmp_8 < len(*dep_array)))) {
                         break
                     }
                 
-                    var _hx_tmp_7 *[]string = name_array; _ = _hx_tmp_7
-                    var _hx_tmp_8 int = name_current; _ = _hx_tmp_8
+                    var _hx_tmp_9 *[]string = dep_array; _ = _hx_tmp_9
+                    var _hx_tmp_10 int = dep_current; _ = _hx_tmp_10
+                    dep_current = (dep_current + 1)
+                    var dep string = (*_hx_tmp_9)[_hx_tmp_10]; _ = dep
+                    Hx_Field_main_genLib(dep, output)
+                }
+            }
+        
+            {
+                var self1 []string = scope.Names(); _ = self1
+                var name_current int = 0; _ = name_current
+                var name_array *[]string = (&self1); _ = name_array
+                for  {
+                    var _hx_tmp_7 int = name_current; _ = _hx_tmp_7
+                    if (!((_hx_tmp_7 < len(*name_array)))) {
+                        break
+                    }
+                
+                    var _hx_tmp_8 *[]string = name_array; _ = _hx_tmp_8
+                    var _hx_tmp_9 int = name_current; _ = _hx_tmp_9
                     name_current = (name_current + 1)
-                    var name string = (*_hx_tmp_7)[_hx_tmp_8]; _ = name
+                    var name string = (*_hx_tmp_8)[_hx_tmp_9]; _ = name
                     var obj types.Object = scope.Lookup(name); _ = obj
                     if (!obj.Exported()) {
                         continue
@@ -136,50 +181,47 @@ func Hx_Field_main_main() {
                         var sig types.Signature = (*_hx_reserved_func.Signature()); _ = sig
                         var recv *types.Var = sig.Recv(); _ = recv
                         var tmp *types.Tuple = sig.Params(); _ = tmp
-                        var _hx_tmp_9 struct { Value types.Tuple; Valid bool }; _ = _hx_tmp_9
-                        if ((tmp != nil)) {
-                            _hx_tmp_9 = struct { Value types.Tuple; Valid bool }{ Value: (*tmp), Valid: true }
-                        } else {
-                            _hx_tmp_9 = struct { Value types.Tuple; Valid bool }{}
-                        }
-                    
-                        var params struct { Value types.Tuple; Valid bool } = _hx_tmp_9; _ = params
                         var _hx_tmp_10 struct { Value types.Tuple; Valid bool }; _ = _hx_tmp_10
-                        if ((params.Valid != false)) {
-                            _hx_tmp_10 = params
+                        if ((tmp != nil)) {
+                            _hx_tmp_10 = struct { Value types.Tuple; Valid bool }{ Value: (*tmp), Valid: true }
                         } else {
                             _hx_tmp_10 = struct { Value types.Tuple; Valid bool }{}
                         }
                     
-                        var params1 struct { Value types.Tuple; Valid bool } = _hx_tmp_10; _ = params1
-                        var tmp1 *types.Tuple = sig.Results(); _ = tmp1
+                        var params struct { Value types.Tuple; Valid bool } = _hx_tmp_10; _ = params
                         var _hx_tmp_11 struct { Value types.Tuple; Valid bool }; _ = _hx_tmp_11
-                        if ((tmp1 != nil)) {
-                            _hx_tmp_11 = struct { Value types.Tuple; Valid bool }{ Value: (*tmp1), Valid: true }
+                        if ((params.Valid != false)) {
+                            _hx_tmp_11 = params
                         } else {
                             _hx_tmp_11 = struct { Value types.Tuple; Valid bool }{}
                         }
                     
-                        var results struct { Value types.Tuple; Valid bool } = _hx_tmp_11; _ = results
+                        var params1 struct { Value types.Tuple; Valid bool } = _hx_tmp_11; _ = params1
+                        var tmp1 *types.Tuple = sig.Results(); _ = tmp1
                         var _hx_tmp_12 struct { Value types.Tuple; Valid bool }; _ = _hx_tmp_12
-                        if ((results.Valid != false)) {
-                            _hx_tmp_12 = results
+                        if ((tmp1 != nil)) {
+                            _hx_tmp_12 = struct { Value types.Tuple; Valid bool }{ Value: (*tmp1), Valid: true }
                         } else {
                             _hx_tmp_12 = struct { Value types.Tuple; Valid bool }{}
                         }
                     
-                        var results1 struct { Value types.Tuple; Valid bool } = _hx_tmp_12; _ = results1
+                        var results struct { Value types.Tuple; Valid bool } = _hx_tmp_12; _ = results
+                        var _hx_tmp_13 struct { Value types.Tuple; Valid bool }; _ = _hx_tmp_13
+                        if ((results.Valid != false)) {
+                            _hx_tmp_13 = results
+                        } else {
+                            _hx_tmp_13 = struct { Value types.Tuple; Valid bool }{}
+                        }
+                    
+                        var results1 struct { Value types.Tuple; Valid bool } = _hx_tmp_13; _ = results1
                         var varadic bool = sig.Variadic(); _ = varadic
                         {
-                            var _hx_tmp_13 string = name; _ = _hx_tmp_13
-                            var _hx_tmp_14 *types.Var = recv; _ = _hx_tmp_14
-                            var _hx_tmp_15 types.Tuple = params1.Value; _ = _hx_tmp_15
-                            var _hx_tmp_16 types.Tuple = results1.Value; _ = _hx_tmp_16
-                            var _hx_tmp_17 bool = varadic; _ = _hx_tmp_17
-                            var _hx_tmp_18 bool = (recv == nil); _ = _hx_tmp_18
-                            var x string = (("    " + Hx_Field_main_genFunc(_hx_tmp_13, _hx_tmp_14, _hx_tmp_15, _hx_tmp_16, _hx_tmp_17, _hx_tmp_18, struct { Value bool; Valid bool }{}.Value)) + "\n"); _ = x
-                            var _hx_tmp_19 string = buf1.Hx_Field_b; _ = _hx_tmp_19
-                            buf1.Hx_Field_b = (_hx_tmp_19 + Hx_Field_std_string(x))
+                            var _hx_tmp_14 string = name; _ = _hx_tmp_14
+                            var _hx_tmp_15 types.Signature = sig; _ = _hx_tmp_15
+                            var _hx_tmp_16 bool = (recv == nil); _ = _hx_tmp_16
+                            var x string = (("    " + Hx_Field_main_genFunc(_hx_tmp_14, _hx_tmp_15, _hx_tmp_16, struct { Value bool; Valid bool }{}.Value)) + "\n"); _ = x
+                            var _hx_tmp_17 string = buf1.Hx_Field_b; _ = _hx_tmp_17
+                            buf1.Hx_Field_b = (_hx_tmp_17 + Hx_Field_std_string(x))
                         }
                     }
                 
@@ -191,50 +233,33 @@ func Hx_Field_main_main() {
                         var name1 string = v3.Name(); _ = name1
                         var type1 types.Type = v3.Type(); _ = type1
                         {
-                            var _hx_tmp_9 string = (("    static var " + name1) + ": "); _ = _hx_tmp_9
-                            var x1 string = ((_hx_tmp_9 + Hx_Field_main_genType(type1)) + ";\n"); _ = x1
-                            var _hx_tmp_10 string = buf2.Hx_Field_b; _ = _hx_tmp_10
-                            buf2.Hx_Field_b = (_hx_tmp_10 + Hx_Field_std_string(x1))
+                            var _hx_tmp_10 string = (("    static var " + name1) + ": "); _ = _hx_tmp_10
+                            var x1 string = ((_hx_tmp_10 + Hx_Field_main_genType(type1)) + ";\n"); _ = x1
+                            var _hx_tmp_11 string = buf2.Hx_Field_b; _ = _hx_tmp_11
+                            buf2.Hx_Field_b = (_hx_tmp_11 + Hx_Field_std_string(x1))
                         }
                     }
                 
                     default:
-                    var _hx_tmp_9 string = reflect.TypeOf(obj).String(); _ = _hx_tmp_9
-                    Hx_Field_haxe_log_trace(_hx_tmp_9, any(map[string]any{ "fileName": ((any)("source/Main.hx")), "lineNumber": ((any)(97)), "className": ((any)("Main")), "methodName": ((any)("main")) }))
                     }
                 }
             }
         }
     }
 
-    var tmp func(any, any) = func(v any, infos any) {
-        Hx_Field_haxe_log_trace(v, infos)
-    }; _ = tmp
-    var length struct { Value int; Valid bool } = struct { Value int; Valid bool }{}; _ = length
-    var _hx_tmp_3 int; _ = _hx_tmp_3
-    if ((length.Valid != false)) {
-        _hx_tmp_3 = length.Value
-    } else {
-        _hx_tmp_3 = 0
-    }
-
-    var keys []string = make([]string, _hx_tmp_3); _ = keys
-    for k := range outputs {keys = append(keys, k)}
-
-    tmp("keys", any(map[string]any{ "fileName": ((any)("source/Main.hx")), "lineNumber": ((any)(106)), "className": ((any)("Main")), "methodName": ((any)("main")), "customParams": &([]any{ ((any)(keys)) }) }))
     {
-        var length1 struct { Value int; Valid bool } = struct { Value int; Valid bool }{}; _ = length1
+        var length struct { Value int; Valid bool } = struct { Value int; Valid bool }{}; _ = length
         var _hx_tmp_4 int; _ = _hx_tmp_4
-        if ((length1.Valid != false)) {
-            _hx_tmp_4 = length1.Value
+        if ((length.Valid != false)) {
+            _hx_tmp_4 = length.Value
         } else {
             _hx_tmp_4 = 0
         }
     
-        var keys1 []string = make([]string, _hx_tmp_4); _ = keys1
-        for k := range outputs {keys1 = append(keys1, k)}
+        var keys []string = make([]string, _hx_tmp_4); _ = keys
+        for k := range outputs {keys = append(keys, k)}
     
-        var self1 []string = keys1; _ = self1
+        var self1 []string = keys; _ = self1
         var file_current int = 0; _ = file_current
         var file_array *[]string = (&self1); _ = file_array
         for  {
@@ -285,14 +310,12 @@ func Hx_Field_main_main() {
             var _hx_tmp_13 string = buf_b; _ = _hx_tmp_13
             buf_b = (_hx_tmp_13 + Hx_Field_std_string(Hx_Field_go_haxe_hxdynamic_getField(Hx_Field_go_haxe_hxdynamic_getField(out, "instanceFunctions"), "b")))
             buf_b = (buf_b + "\n}")
-            var _hx_tmp_15 string = ((("" + output) + "/go/") + lib); _ = _hx_tmp_15
-            var _hx_tmp_14 error = os.MkdirAll(_hx_tmp_15, 0775); _ = _hx_tmp_14
-            Hx_Field_haxe_log_trace(_hx_tmp_14, any(map[string]any{ "fileName": ((any)("source/Main.hx")), "lineNumber": ((any)(123)), "className": ((any)("Main")), "methodName": ((any)("main")) }))
-            var _hx_tmp_18 string = (((("" + output) + "/go/") + lib) + "/"); _ = _hx_tmp_18
-            var _hx_tmp_17 string = ((_hx_tmp_18 + Hx_Field_main_toPascalCase(file)) + ".hx"); _ = _hx_tmp_17
-            var _hx_tmp_19 []byte = (([]byte)(buf_b)); _ = _hx_tmp_19
-            var _hx_tmp_16 error = os.WriteFile(_hx_tmp_17, _hx_tmp_19, 0666); _ = _hx_tmp_16
-            Hx_Field_haxe_log_trace(_hx_tmp_16, any(map[string]any{ "fileName": ((any)("source/Main.hx")), "lineNumber": ((any)(124)), "className": ((any)("Main")), "methodName": ((any)("main")) }))
+            var _hx_tmp_14 string = ((("" + output) + "/go/") + lib); _ = _hx_tmp_14
+            os.MkdirAll(_hx_tmp_14, 0775)
+            var _hx_tmp_16 string = (((("" + output) + "/go/") + lib) + "/"); _ = _hx_tmp_16
+            var _hx_tmp_15 string = ((_hx_tmp_16 + Hx_Field_main_toPascalCase(file)) + ".hx"); _ = _hx_tmp_15
+            var _hx_tmp_17 []byte = (([]byte)(buf_b)); _ = _hx_tmp_17
+            os.WriteFile(_hx_tmp_15, _hx_tmp_17, 0666)
         }
     }
 }
@@ -305,48 +328,84 @@ func Hx_Field_main_genFile(file any) string {
     return ""
 }
 
-func Hx_Field_main_genFunc(name string, recv *types.Var, params types.Tuple, results types.Tuple, varadic bool, topLevel bool, closure bool) string {
-    var _hx_tmp_0 types.Tuple = params; _ = _hx_tmp_0
-    var _hx_tmp_1 bool = varadic; _ = _hx_tmp_1
-    var params1 *[]string = Hx_Field_main_genTuple(_hx_tmp_0, _hx_tmp_1, struct { Value bool; Valid bool }{}.Value); _ = params1
+func Hx_Field_main_genFunc(name string, sig types.Signature, topLevel bool, closure bool) string {
+    var recv *types.Var = sig.Recv(); _ = recv
+    var tmp *types.Tuple = sig.Params(); _ = tmp
+    var _hx_tmp_0 struct { Value types.Tuple; Valid bool }; _ = _hx_tmp_0
+    if ((tmp != nil)) {
+        _hx_tmp_0 = struct { Value types.Tuple; Valid bool }{ Value: (*tmp), Valid: true }
+    } else {
+        _hx_tmp_0 = struct { Value types.Tuple; Valid bool }{}
+    }
+
+    var params struct { Value types.Tuple; Valid bool } = _hx_tmp_0; _ = params
+    var _hx_tmp_1 struct { Value types.Tuple; Valid bool }; _ = _hx_tmp_1
+    if ((params.Valid != false)) {
+        _hx_tmp_1 = params
+    } else {
+        _hx_tmp_1 = struct { Value types.Tuple; Valid bool }{}
+    }
+
+    var params1 struct { Value types.Tuple; Valid bool } = _hx_tmp_1; _ = params1
+    var tmp1 *types.Tuple = sig.Results(); _ = tmp1
+    var _hx_tmp_2 struct { Value types.Tuple; Valid bool }; _ = _hx_tmp_2
+    if ((tmp1 != nil)) {
+        _hx_tmp_2 = struct { Value types.Tuple; Valid bool }{ Value: (*tmp1), Valid: true }
+    } else {
+        _hx_tmp_2 = struct { Value types.Tuple; Valid bool }{}
+    }
+
+    var results struct { Value types.Tuple; Valid bool } = _hx_tmp_2; _ = results
+    var _hx_tmp_3 struct { Value types.Tuple; Valid bool }; _ = _hx_tmp_3
+    if ((results.Valid != false)) {
+        _hx_tmp_3 = results
+    } else {
+        _hx_tmp_3 = struct { Value types.Tuple; Valid bool }{}
+    }
+
+    var results1 struct { Value types.Tuple; Valid bool } = _hx_tmp_3; _ = results1
+    var varadic bool = sig.Variadic(); _ = varadic
+    var _hx_tmp_4 types.Tuple = params1.Value; _ = _hx_tmp_4
+    var _hx_tmp_5 bool = varadic; _ = _hx_tmp_5
+    var params2 *[]string = Hx_Field_main_genTuple(_hx_tmp_4, _hx_tmp_5, struct { Value bool; Valid bool }{}.Value); _ = params2
     var meta string = ""; _ = meta
-    var _hx_tmp_2 bool; _ = _hx_tmp_2
-    var _hx_tmp_3 bool; _ = _hx_tmp_3
-    if ((results.Len() > 1)) {
-        _hx_tmp_3 = !Hx_Field_main_isResultType(results)
+    var _hx_tmp_6 bool; _ = _hx_tmp_6
+    var _hx_tmp_7 bool; _ = _hx_tmp_7
+    if ((results1.Value.Len() > 1)) {
+        _hx_tmp_7 = !Hx_Field_main_isResultType(results1.Value)
     } else {
-        _hx_tmp_3 = false
+        _hx_tmp_7 = false
     }
 
-    if (_hx_tmp_3) {
-        _hx_tmp_2 = !closure
+    if (_hx_tmp_7) {
+        _hx_tmp_6 = !closure
     } else {
-        _hx_tmp_2 = false
+        _hx_tmp_6 = false
     }
 
-    if (_hx_tmp_2) {
+    if (_hx_tmp_6) {
         var names *[]string = &([]string{}); _ = names
         var unnamed int = 0; _ = unnamed
         {
             var _g int = 0; _ = _g
-            var _g1 int = results.Len(); _ = _g1
+            var _g1 int = results1.Value.Len(); _ = _g1
             for ((_g < _g1)) {
-                var _hx_tmp_4 int = _g; _ = _hx_tmp_4
+                var _hx_tmp_8 int = _g; _ = _hx_tmp_8
                 _g = (_g + 1)
-                var idx int = _hx_tmp_4; _ = idx
-                var name string = (*results.At(idx)).Name(); _ = name
+                var idx int = _hx_tmp_8; _ = idx
+                var name string = (*results1.Value.At(idx)).Name(); _ = name
                 if ((name == "")) {
-                    var _hx_tmp_5 int = unnamed; _ = _hx_tmp_5
+                    var _hx_tmp_9 int = unnamed; _ = _hx_tmp_9
                     unnamed = (unnamed + 1)
-                    name = ("p" + Hx_Field_std_string(_hx_tmp_5))
+                    name = ("p" + Hx_Field_std_string(_hx_tmp_9))
                 }
             
                 {
                     var data []string = (*names); _ = data
-                    var _hx_tmp_5 *[]string = names; _ = _hx_tmp_5
-                    (*_hx_tmp_5) = append(data, (("\"" + name) + "\""))
-                    var _hx_tmp_6 int = len(data); _ = _hx_tmp_6
-                    var this1 int = (_hx_tmp_6 + int(1)); _ = this1
+                    var _hx_tmp_9 *[]string = names; _ = _hx_tmp_9
+                    (*_hx_tmp_9) = append(data, (("\"" + name) + "\""))
+                    var _hx_tmp_10 int = len(data); _ = _hx_tmp_10
+                    var this1 int = (_hx_tmp_10 + int(1)); _ = this1
                 }
             }
         }
@@ -355,18 +414,18 @@ func Hx_Field_main_genFunc(name string, recv *types.Var, params types.Tuple, res
         var length int = len(data); _ = length
         var sep string = ", "; _ = sep
         var meta1 string; _ = meta1
-        var _hx_tmp_4 int = length; _ = _hx_tmp_4
-        if ((_hx_tmp_4 == int(0))) {
+        var _hx_tmp_8 int = length; _ = _hx_tmp_8
+        if ((_hx_tmp_8 == int(0))) {
             meta1 = ""
         } else {
             var result string = ""; _ = result
             var i int = int(0); _ = i
             for ((i < length)) {
-                var _hx_tmp_5 string = result; _ = _hx_tmp_5
-                result = (_hx_tmp_5 + Hx_Field_std_string(data[((int)(i))]))
-                var _hx_tmp_6 int = i; _ = _hx_tmp_6
-                var _hx_tmp_7 int = length; _ = _hx_tmp_7
-                if ((_hx_tmp_6 < (_hx_tmp_7 - int(1)))) {
+                var _hx_tmp_9 string = result; _ = _hx_tmp_9
+                result = (_hx_tmp_9 + Hx_Field_std_string(data[((int)(i))]))
+                var _hx_tmp_10 int = i; _ = _hx_tmp_10
+                var _hx_tmp_11 int = length; _ = _hx_tmp_11
+                if ((_hx_tmp_10 < (_hx_tmp_11 - int(1)))) {
                     result = (result + sep)
                 }
             
@@ -379,72 +438,155 @@ func Hx_Field_main_genFunc(name string, recv *types.Var, params types.Tuple, res
         meta = (("@:go.Tuple(" + meta1) + ") ")
     }
 
-    var _hx_tmp_4 string; _ = _hx_tmp_4
+    var _hx_tmp_8 struct { Value types.TypeParamList; Valid bool }; _ = _hx_tmp_8
+    if ((sig.TypeParams() != nil)) {
+        _hx_tmp_8 = struct { Value types.TypeParamList; Valid bool }{ Value: (*sig.TypeParams()), Valid: true }
+    } else {
+        _hx_tmp_8 = struct { Value types.TypeParamList; Valid bool }{}
+    }
+
+    var tParams struct { Value types.TypeParamList; Valid bool } = _hx_tmp_8; _ = tParams
+    var tParamsStr string = ""; _ = tParamsStr
+    if ((tParams.Valid != false)) {
+        var tParamsLocal *[]*types.TypeParam = &([]*types.TypeParam{}); _ = tParamsLocal
+        {
+            var _g int = 0; _ = _g
+            var _g1 int = tParams.Value.Len(); _ = _g1
+            for ((_g < _g1)) {
+                var _hx_tmp_9 int = _g; _ = _hx_tmp_9
+                _g = (_g + 1)
+                var i int = _hx_tmp_9; _ = i
+                {
+                    var x *types.TypeParam = tParams.Value.At(i); _ = x
+                    {
+                        var data []*types.TypeParam = (*tParamsLocal); _ = data
+                        var _hx_tmp_10 *[]*types.TypeParam = tParamsLocal; _ = _hx_tmp_10
+                        (*_hx_tmp_10) = append(data, x)
+                        var _hx_tmp_11 int = len(data); _ = _hx_tmp_11
+                        var this1 int = (_hx_tmp_11 + int(1)); _ = this1
+                    }
+                }
+            }
+        }
+    
+        var output *[]string = &([]string{}); _ = output
+        {
+            var _g2 int = 0; _ = _g2
+            for  {
+                var _hx_tmp_9 int = _g2; _ = _hx_tmp_9
+                if (!((_hx_tmp_9 < len(*tParamsLocal)))) {
+                    break
+                }
+            
+                var x *types.TypeParam = (*tParamsLocal)[_g2]; _ = x
+                _g2++
+                {
+                    var x1 string = (*x).String(); _ = x1
+                    {
+                        var data []string = (*output); _ = data
+                        var _hx_tmp_10 *[]string = output; _ = _hx_tmp_10
+                        (*_hx_tmp_10) = append(data, x1)
+                        var _hx_tmp_11 int = len(data); _ = _hx_tmp_11
+                        var this1 int = (_hx_tmp_11 + int(1)); _ = this1
+                    }
+                }
+            }
+        }
+    
+        var data []string = (*output); _ = data
+        var length int = len(data); _ = length
+        var sep string = ", "; _ = sep
+        var tParamsStr1 string; _ = tParamsStr1
+        var _hx_tmp_9 int = length; _ = _hx_tmp_9
+        if ((_hx_tmp_9 == int(0))) {
+            tParamsStr1 = ""
+        } else {
+            var result string = ""; _ = result
+            var i int = int(0); _ = i
+            for ((i < length)) {
+                var _hx_tmp_10 string = result; _ = _hx_tmp_10
+                result = (_hx_tmp_10 + Hx_Field_std_string(data[((int)(i))]))
+                var _hx_tmp_11 int = i; _ = _hx_tmp_11
+                var _hx_tmp_12 int = length; _ = _hx_tmp_12
+                if ((_hx_tmp_11 < (_hx_tmp_12 - int(1)))) {
+                    result = (result + sep)
+                }
+            
+                i = (i + ((int)(1)))
+            }
+        
+            tParamsStr1 = result
+        }
+    
+        tParamsStr = (("<" + tParamsStr1) + ">")
+    }
+
+    var _hx_tmp_9 string; _ = _hx_tmp_9
     if (closure) {
-        _hx_tmp_4 = ""
+        _hx_tmp_9 = ""
     } else {
-        _hx_tmp_4 = ("function " + Hx_Field_main_toHaxeCase(name))
+        _hx_tmp_9 = ("function " + Hx_Field_main_toHaxeCase(name))
     }
 
-    var tmp string = _hx_tmp_4; _ = tmp
-    var _hx_tmp_5 string = ("" + meta); _ = _hx_tmp_5
-    var _hx_tmp_6 string; _ = _hx_tmp_6
+    var tmp2 string = _hx_tmp_9; _ = tmp2
+    var _hx_tmp_10 string = ("" + meta); _ = _hx_tmp_10
+    var _hx_tmp_11 string; _ = _hx_tmp_11
     if ((topLevel && !closure)) {
-        _hx_tmp_6 = "static "
+        _hx_tmp_11 = "static "
     } else {
-        _hx_tmp_6 = ""
+        _hx_tmp_11 = ""
     }
 
-    var tmp1 string = (((_hx_tmp_5 + (_hx_tmp_6)) + tmp) + "("); _ = tmp1
-    var data []string = (*params1); _ = data
+    var tmp3 string = ((((_hx_tmp_10 + (_hx_tmp_11)) + tmp2) + tParamsStr) + "("); _ = tmp3
+    var data []string = (*params2); _ = data
     var length int = len(data); _ = length
     var sep string = ", "; _ = sep
-    var tmp2 string; _ = tmp2
-    var _hx_tmp_7 int = length; _ = _hx_tmp_7
-    if ((_hx_tmp_7 == int(0))) {
-        tmp2 = ""
+    var tmp4 string; _ = tmp4
+    var _hx_tmp_12 int = length; _ = _hx_tmp_12
+    if ((_hx_tmp_12 == int(0))) {
+        tmp4 = ""
     } else {
         var result string = ""; _ = result
         var i int = int(0); _ = i
         for ((i < length)) {
-            var _hx_tmp_8 string = result; _ = _hx_tmp_8
-            result = (_hx_tmp_8 + Hx_Field_std_string(data[((int)(i))]))
-            var _hx_tmp_9 int = i; _ = _hx_tmp_9
-            var _hx_tmp_10 int = length; _ = _hx_tmp_10
-            if ((_hx_tmp_9 < (_hx_tmp_10 - int(1)))) {
+            var _hx_tmp_13 string = result; _ = _hx_tmp_13
+            result = (_hx_tmp_13 + Hx_Field_std_string(data[((int)(i))]))
+            var _hx_tmp_14 int = i; _ = _hx_tmp_14
+            var _hx_tmp_15 int = length; _ = _hx_tmp_15
+            if ((_hx_tmp_14 < (_hx_tmp_15 - int(1)))) {
                 result = (result + sep)
             }
         
             i = (i + ((int)(1)))
         }
     
-        tmp2 = result
+        tmp4 = result
     }
 
-    var _hx_tmp_8 string; _ = _hx_tmp_8
-    if ((results.Len() == 0)) {
-        _hx_tmp_8 = "Void"
+    var _hx_tmp_13 string; _ = _hx_tmp_13
+    if ((results1.Value.Len() == 0)) {
+        _hx_tmp_13 = "Void"
     } else {
-        _hx_tmp_8 = Hx_Field_main_genResults(results)
+        _hx_tmp_13 = Hx_Field_main_genResults(results1.Value)
     }
 
-    var tmp3 string = _hx_tmp_8; _ = tmp3
-    var _hx_tmp_9 string = ((tmp1 + tmp2) + ")"); _ = _hx_tmp_9
-    var _hx_tmp_10 string; _ = _hx_tmp_10
+    var tmp5 string = _hx_tmp_13; _ = tmp5
+    var _hx_tmp_14 string = ((tmp3 + tmp4) + ")"); _ = _hx_tmp_14
+    var _hx_tmp_15 string; _ = _hx_tmp_15
     if (closure) {
-        _hx_tmp_10 = " -> "
+        _hx_tmp_15 = " -> "
     } else {
-        _hx_tmp_10 = ": "
+        _hx_tmp_15 = ": "
     }
 
-    var _hx_tmp_11 string; _ = _hx_tmp_11
+    var _hx_tmp_16 string; _ = _hx_tmp_16
     if (closure) {
-        _hx_tmp_11 = ""
+        _hx_tmp_16 = ""
     } else {
-        _hx_tmp_11 = ";"
+        _hx_tmp_16 = ";"
     }
 
-    return (((_hx_tmp_9 + (_hx_tmp_10)) + tmp3) + (_hx_tmp_11))
+    return (((_hx_tmp_14 + (_hx_tmp_15)) + tmp5) + (_hx_tmp_16))
 }
 
 func Hx_Field_main_isResultType(args types.Tuple) bool {
@@ -670,27 +812,7 @@ func Hx_Field_main_genType(t types.Type) string {
                             if (Hx_Field_stringtools_startsWith(s, "func")) {
                                 var v *types.Signature = (((any)(t))).(*types.Signature); _ = v
                                 var sig types.Signature = (*v); _ = sig
-                                var tmp *types.Var = sig.Recv(); _ = tmp
-                                var tmp1 *types.Tuple = sig.Params(); _ = tmp1
-                                var _hx_tmp_0 struct { Value types.Tuple; Valid bool }; _ = _hx_tmp_0
-                                if ((tmp1 != nil)) {
-                                    _hx_tmp_0 = struct { Value types.Tuple; Valid bool }{ Value: (*tmp1), Valid: true }
-                                } else {
-                                    _hx_tmp_0 = struct { Value types.Tuple; Valid bool }{}
-                                }
-                            
-                                var tmp2 struct { Value types.Tuple; Valid bool } = _hx_tmp_0; _ = tmp2
-                                var tmp3 *types.Tuple = sig.Results(); _ = tmp3
-                                var _hx_tmp_1 *types.Var = tmp; _ = _hx_tmp_1
-                                var _hx_tmp_2 types.Tuple = tmp2.Value; _ = _hx_tmp_2
-                                var _hx_tmp_3 struct { Value types.Tuple; Valid bool }; _ = _hx_tmp_3
-                                if ((tmp3 != nil)) {
-                                    _hx_tmp_3 = struct { Value types.Tuple; Valid bool }{ Value: (*tmp3), Valid: true }
-                                } else {
-                                    _hx_tmp_3 = struct { Value types.Tuple; Valid bool }{}
-                                }
-                            
-                                return Hx_Field_main_genFunc("", _hx_tmp_1, _hx_tmp_2, _hx_tmp_3.Value, sig.Variadic(), false, true)
+                                return Hx_Field_main_genFunc("", sig, false, true)
                             } else {
                                 var _hx_tmp_0 string = s; _ = _hx_tmp_0
                                 if ((Hx_Field_go_haxe_hxstring_indexOf(_hx_tmp_0, ".", struct { Value int; Valid bool }{}) != -1)) {
