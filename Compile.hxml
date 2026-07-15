@@ -1,0 +1,4 @@
+-cp source
+-main Main
+-L hx2go
+--custom-target go=binary
