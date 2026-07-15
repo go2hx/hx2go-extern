@@ -496,7 +496,7 @@ extern class ImportMode {}
 // Package-level variables, constructors and functions
 // ---------------------------------------------------------------------------
 
-@:go.Type({ imports: ["go/types"] })
+@:go.Type({ name: "types", imports: ["go/types"] })
 extern class Types {
     // Package-level variables.
     static var typ: go.Slice<go.Pointer<Basic>>;

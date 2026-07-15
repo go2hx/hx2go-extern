@@ -171,7 +171,7 @@ func Hx_Field_main_genLib(lib string, output string) {
                         var v *types.TypeName = (((any)(obj))).(*types.TypeName); _ = v
                         var _hx_reserved_type types.TypeName = (*v); _ = _hx_reserved_type
                         var isNamed bool = Hx_Field_main_isNamedType(_hx_reserved_type.Type()); _ = isNamed
-                        var buf any = getOutput(obj.Name()); _ = buf
+                        var out any = getOutput(obj.Name()); _ = out
                         if (isNamed) {
                             var tmp_v_1 *types.Named = (((any)(_hx_reserved_type.Type()))).(*types.Named); _ = tmp_v_1
                             var named types.Named = (*tmp_v_1); _ = named
@@ -234,7 +234,34 @@ func Hx_Field_main_genLib(lib string, output string) {
                                     tmp = (("<" + tmp1) + ">")
                                 }
                             
-                                Hx_Field_go_haxe_hxdynamic_setField(buf, "paramStr", tmp)
+                                Hx_Field_go_haxe_hxdynamic_setField(out, "paramStr", tmp)
+                            }
+                        
+                            var methodSet *types.MethodSet = types.NewMethodSet(types.NewPointer(_hx_reserved_type.Type())); _ = methodSet
+                            {
+                                var _g int = 0; _ = _g
+                                var _g1 int = (*methodSet).Len(); _ = _g1
+                                for ((_g < _g1)) {
+                                    var _hx_tmp_10 int = _g; _ = _hx_tmp_10
+                                    _g = (_g + 1)
+                                    var i int = _hx_tmp_10; _ = i
+                                    var sel types.Selection = (*(*methodSet).At(i)); _ = sel
+                                    var tmp_v_2 *types.Func = (((any)(sel.Obj()))).(*types.Func); _ = tmp_v_2
+                                    var method types.Func = (*tmp_v_2); _ = method
+                                    if (!method.Exported()) {
+                                        continue
+                                    }
+                                
+                                    var sig types.Signature = (*method.Signature()); _ = sig
+                                    {
+                                        var _this *Hx_Obj_stringbuf = (Hx_Field_go_haxe_hxdynamic_toClass(Hx_Field_go_haxe_hxdynamic_getField(out, "instanceFunctions"), "Hx_Obj_stringbuf")).(*Hx_Obj_stringbuf); _ = _this
+                                        var _hx_tmp_11 string = method.Name(); _ = _hx_tmp_11
+                                        var _hx_tmp_12 types.Signature = sig; _ = _hx_tmp_12
+                                        var x string = (("    " + Hx_Field_main_genFunc(_hx_tmp_11, _hx_tmp_12, false, struct { Value bool; Valid bool }{}.Value)) + "\n"); _ = x
+                                        var _hx_tmp_13 string = _this.Hx_Field_b; _ = _hx_tmp_13
+                                        _this.Hx_Field_b = (_hx_tmp_13 + Hx_Field_std_string(x))
+                                    }
+                                }
                             }
                         }
                     }
@@ -243,9 +270,9 @@ func Hx_Field_main_genLib(lib string, output string) {
                     {
                         var v1 *types.Func = (((any)(obj))).(*types.Func); _ = v1
                         var _hx_reserved_func types.Func = (*v1); _ = _hx_reserved_func
-                        var buf1 *Hx_Obj_stringbuf = (Hx_Field_go_haxe_hxdynamic_toClass(Hx_Field_go_haxe_hxdynamic_getField(getOutput((*entry).Name), "staticFunctions"), "Hx_Obj_stringbuf")).(*Hx_Obj_stringbuf); _ = buf1
                         var sig types.Signature = (*_hx_reserved_func.Signature()); _ = sig
                         var recv *types.Var = sig.Recv(); _ = recv
+                        var buf *Hx_Obj_stringbuf = (Hx_Field_go_haxe_hxdynamic_toClass(Hx_Field_go_haxe_hxdynamic_getField(getOutput((*entry).Name), "staticFunctions"), "Hx_Obj_stringbuf")).(*Hx_Obj_stringbuf); _ = buf
                         var tmp *types.Tuple = sig.Params(); _ = tmp
                         var _hx_tmp_10 struct { Value types.Tuple; Valid bool }; _ = _hx_tmp_10
                         if ((tmp != nil)) {
@@ -286,8 +313,8 @@ func Hx_Field_main_genLib(lib string, output string) {
                             var _hx_tmp_15 types.Signature = sig; _ = _hx_tmp_15
                             var _hx_tmp_16 bool = (recv == nil); _ = _hx_tmp_16
                             var x string = (("    " + Hx_Field_main_genFunc(_hx_tmp_14, _hx_tmp_15, _hx_tmp_16, struct { Value bool; Valid bool }{}.Value)) + "\n"); _ = x
-                            var _hx_tmp_17 string = buf1.Hx_Field_b; _ = _hx_tmp_17
-                            buf1.Hx_Field_b = (_hx_tmp_17 + Hx_Field_std_string(x))
+                            var _hx_tmp_17 string = buf.Hx_Field_b; _ = _hx_tmp_17
+                            buf.Hx_Field_b = (_hx_tmp_17 + Hx_Field_std_string(x))
                         }
                     }
                 
@@ -295,14 +322,14 @@ func Hx_Field_main_genLib(lib string, output string) {
                     {
                         var v2 *types.Var = (((any)(obj))).(*types.Var); _ = v2
                         var v3 types.Var = (*v2); _ = v3
-                        var buf2 *Hx_Obj_stringbuf = (Hx_Field_go_haxe_hxdynamic_toClass(Hx_Field_go_haxe_hxdynamic_getField(getOutput((*entry).Name), "staticVars"), "Hx_Obj_stringbuf")).(*Hx_Obj_stringbuf); _ = buf2
+                        var buf1 *Hx_Obj_stringbuf = (Hx_Field_go_haxe_hxdynamic_toClass(Hx_Field_go_haxe_hxdynamic_getField(getOutput((*entry).Name), "staticVars"), "Hx_Obj_stringbuf")).(*Hx_Obj_stringbuf); _ = buf1
                         var name1 string = v3.Name(); _ = name1
                         var type1 types.Type = v3.Type(); _ = type1
                         {
                             var _hx_tmp_10 string = (("    static var " + name1) + ": "); _ = _hx_tmp_10
                             var x1 string = ((_hx_tmp_10 + Hx_Field_main_genType(type1)) + ";\n"); _ = x1
-                            var _hx_tmp_11 string = buf2.Hx_Field_b; _ = _hx_tmp_11
-                            buf2.Hx_Field_b = (_hx_tmp_11 + Hx_Field_std_string(x1))
+                            var _hx_tmp_11 string = buf1.Hx_Field_b; _ = _hx_tmp_11
+                            buf1.Hx_Field_b = (_hx_tmp_11 + Hx_Field_std_string(x1))
                         }
                     }
                 
@@ -371,18 +398,39 @@ func Hx_Field_main_genLib(lib string, output string) {
             buf_b = (_hx_tmp_11 + Hx_Field_std_string(Hx_Field_go_haxe_hxdynamic_getField(Hx_Field_go_haxe_hxdynamic_getField(out, "staticVars"), "b")))
             var _hx_tmp_12 string = buf_b; _ = _hx_tmp_12
             buf_b = (_hx_tmp_12 + Hx_Field_std_string(Hx_Field_go_haxe_hxdynamic_getField(Hx_Field_go_haxe_hxdynamic_getField(out, "instanceVars"), "b")))
-            buf_b = (buf_b + "\n")
-            var _hx_tmp_13 string = buf_b; _ = _hx_tmp_13
-            buf_b = (_hx_tmp_13 + Hx_Field_std_string(Hx_Field_go_haxe_hxdynamic_getField(Hx_Field_go_haxe_hxdynamic_getField(out, "staticFunctions"), "b")))
+            var _hx_tmp_13 bool; _ = _hx_tmp_13
+            if (Hx_Field_go_haxe_hxdynamic_gt(Hx_Field_go_haxe_hxdynamic_getField(Hx_Field_go_haxe_hxdynamic_getField(Hx_Field_go_haxe_hxdynamic_getField(out, "staticVars"), "b"), "length"), ((any)(0)))) {
+                _hx_tmp_13 = true
+            } else {
+                _hx_tmp_13 = Hx_Field_go_haxe_hxdynamic_gt(Hx_Field_go_haxe_hxdynamic_getField(Hx_Field_go_haxe_hxdynamic_getField(Hx_Field_go_haxe_hxdynamic_getField(out, "instanceVars"), "b"), "length"), ((any)(0)))
+            }
+        
+            if (_hx_tmp_13) {
+                buf_b = (buf_b + "\n")
+            }
+        
             var _hx_tmp_14 string = buf_b; _ = _hx_tmp_14
-            buf_b = (_hx_tmp_14 + Hx_Field_std_string(Hx_Field_go_haxe_hxdynamic_getField(Hx_Field_go_haxe_hxdynamic_getField(out, "instanceFunctions"), "b")))
-            buf_b = (buf_b + "\n}")
-            var _hx_tmp_15 string = ((("" + output) + "/go/") + lib); _ = _hx_tmp_15
-            os.MkdirAll(_hx_tmp_15, 0775)
-            var _hx_tmp_17 string = (((("" + output) + "/go/") + lib) + "/"); _ = _hx_tmp_17
-            var _hx_tmp_16 string = ((_hx_tmp_17 + Hx_Field_main_toPascalCase(file)) + ".hx"); _ = _hx_tmp_16
-            var _hx_tmp_18 []byte = (([]byte)(buf_b)); _ = _hx_tmp_18
-            os.WriteFile(_hx_tmp_16, _hx_tmp_18, 0666)
+            buf_b = (_hx_tmp_14 + Hx_Field_std_string(Hx_Field_go_haxe_hxdynamic_getField(Hx_Field_go_haxe_hxdynamic_getField(out, "staticFunctions"), "b")))
+            var _hx_tmp_15 string = buf_b; _ = _hx_tmp_15
+            buf_b = (_hx_tmp_15 + Hx_Field_std_string(Hx_Field_go_haxe_hxdynamic_getField(Hx_Field_go_haxe_hxdynamic_getField(out, "instanceFunctions"), "b")))
+            var _hx_tmp_16 bool; _ = _hx_tmp_16
+            if (Hx_Field_go_haxe_hxdynamic_gt(Hx_Field_go_haxe_hxdynamic_getField(Hx_Field_go_haxe_hxdynamic_getField(Hx_Field_go_haxe_hxdynamic_getField(out, "staticFunctions"), "b"), "length"), ((any)(0)))) {
+                _hx_tmp_16 = true
+            } else {
+                _hx_tmp_16 = Hx_Field_go_haxe_hxdynamic_gt(Hx_Field_go_haxe_hxdynamic_getField(Hx_Field_go_haxe_hxdynamic_getField(Hx_Field_go_haxe_hxdynamic_getField(out, "instanceFunctions"), "b"), "length"), ((any)(0)))
+            }
+        
+            if (_hx_tmp_16) {
+                buf_b = (buf_b + "\n")
+            }
+        
+            buf_b = (buf_b + "}")
+            var _hx_tmp_17 string = ((("" + output) + "/go/") + lib); _ = _hx_tmp_17
+            os.MkdirAll(_hx_tmp_17, 0775)
+            var _hx_tmp_19 string = (((("" + output) + "/go/") + lib) + "/"); _ = _hx_tmp_19
+            var _hx_tmp_18 string = ((_hx_tmp_19 + Hx_Field_main_toPascalCase(file)) + ".hx"); _ = _hx_tmp_18
+            var _hx_tmp_20 []byte = (([]byte)(buf_b)); _ = _hx_tmp_20
+            os.WriteFile(_hx_tmp_18, _hx_tmp_20, 0666)
         }
     }
 }
@@ -756,14 +804,6 @@ func Hx_Field_main_genTuple(args types.Tuple, varadic bool, ret bool) *[]string 
     }
 
     return items
-}
-
-func Hx_Field_main_genStmt(stmt any) string {
-    return ""
-}
-
-func Hx_Field_main_genExpr(expr any) string {
-    return ""
 }
 
 func Hx_Field_main_resolvePath(path string) string {

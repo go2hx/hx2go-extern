@@ -83,7 +83,7 @@ class Main {
                 Syntax.code("case *types.TypeName:"); {
                     var type = typeAs(obj, TypeName);
                     var isNamed = isNamedType(type.type());
-                    var buf = getOutput(obj.name());
+                    var out = getOutput(obj.name());
 
                     if (isNamed) {
                         var named = typeAs(type.type(), Named);
@@ -100,19 +100,31 @@ class Main {
                                 params.push('${t.string()}: ${constraintStr}');
                             }
 
-                            buf.paramStr = params.length == 0 ? "" : "<" + params.join(", ") + ">";
+                            out.paramStr = params.length == 0 ? "" : "<" + params.join(", ") + ">";
                         }
 
+                        var methodSet = std.go.types.Types.newMethodSet(Syntax.code("types.NewPointer({0})", type.type()));
+                        for (i in 0...methodSet.value.len()) {
+                            var sel = methodSet.value.at(i).value;
+                            var method = typeAs(sel.obj(), Func);
+
+                            if (!method.exported()) {
+                                continue;
+                            }
+
+                            var sig = method.signature().value;
+                            out.instanceFunctions.add('    ${genFunc(method.name(), sig, false)}\n');
+                        }
                     }
                 }
 
                 Syntax.code("case *types.Func:"); {
                     var func = typeAs(obj, Func);
-                    var buf = getOutput(entry.value.name).staticFunctions;
                     var sig = func.signature().value;
+                    var recv = sig.recv();
+                    var buf = getOutput(entry.value.name).staticFunctions;
 
                     // var typeParams = sig.typeParams().value;
-                    var recv = sig.recv();
                     var params = sig.params()?.value ?? null;
                     var results = sig.results()?.value ?? null;
                     var varadic = sig.variadic();
@@ -149,13 +161,14 @@ class Main {
             buf.add('extern class ${toPascalCase(file)}${out.paramStr} {\n\n');
             buf.add(out.staticVars.toString());
             buf.add(out.instanceVars.toString());
-            buf.add('\n');
+            if (out.staticVars.length > 0 || out.instanceVars.length > 0) buf.add('\n');
             buf.add(out.staticFunctions.toString());
             buf.add(out.instanceFunctions.toString());
-            buf.add("\n}");
+            if (out.staticFunctions.length > 0 || out.instanceFunctions.length > 0) buf.add("\n");
+            buf.add("}");
 
             Os.mkdirAll('${output}/go/${lib}', Syntax.code("0775"));
-           Os.writeFile('${output}/go/${lib}/${toPascalCase(file)}.hx', cast buf.toString(), Syntax.code("0666"));
+            Os.writeFile('${output}/go/${lib}/${toPascalCase(file)}.hx', cast buf.toString(), Syntax.code("0666"));
         }
     }
 
@@ -211,7 +224,7 @@ class Main {
 
         return '${meta}${topLevel && !closure ? "static " : ""}${closure ? "" : 'function ${toHaxeCase(name)}'}${tParamsStr}(${params.join(", ")})${closure ? ' -> ' : ': '}${results.len() == 0 ? "Void" :genResults(results)}${closure ? "" : ";"}';
     }
-    
+
     static function isResultType(args:std.go.types.Types.Tuple) {
         return args.len() == 2 && args.at(1).value.type().string() == "error";
     }
@@ -234,9 +247,9 @@ class Main {
 
         for (i in 0...args.len()) {
             var isLastArg = i == args.len() - 1;
-            
+
             var v = args.at(i).value;
-            var n = v.name();      
+            var n = v.name();
             if (n == "") {
                 n = 'p${idx++}';
             }
@@ -247,16 +260,8 @@ class Main {
                 else n + ": " + genType(v.type())
             );
         }
-        
+
         return items;
-    }
-
-    static function genStmt(stmt):String {
-        return '';
-    }
-
-    static function genExpr(expr):String {
-        return '';
     }
 
     inline extern static function typeAs<V, T>(value: V, as: Class<T>): T {
@@ -301,13 +306,13 @@ class Main {
             case "string": "String";
             case "bool": "Bool";
             case "any": "Dynamic";
-            
+
             case "int": "Int";
             case "int64": "go.Int64";
             case "int32": "go.Int32";
             case "int16": "go.Int16";
             case "int8": "go.Int8";
-            
+
             case "uint": "go.UInt";
             case "uint64": "go.UInt64";
             case "uint32": "go.UInt32";
@@ -317,7 +322,7 @@ class Main {
             case "float64": "Float";
             case "float32": "go.Float32";
             case "float16": "go.Float16";
-            
+
             case "byte": "go.Byte";
             case "rune": "go.Rune";
 
