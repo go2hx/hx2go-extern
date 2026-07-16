@@ -1,0 +1,13 @@
+{
+  "name": "go2hx",
+  "url" : "https://github.com/go2hx/go2hx",
+  "license": "MIT",
+  "tags": ["hx2go", "go2hx", "extern"],
+  "description": "Extern generator for hx2go",
+  "version": "1.0.0",
+  "classPath": "source/",
+  "main": "Run",
+  "releasenote": "initial release",
+  "contributors": ["PXShadow", "ElliottStoneham", "mikaib"],
+  "dependencies": {}
+}

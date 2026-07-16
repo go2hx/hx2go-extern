@@ -80,6 +80,7 @@ extern class LoadMode {
 @:go.Type({ name: "packages.Config", imports: ["golang.org/x/tools/go/packages"] })
 extern class Config {
 	public var mode: LoadMode;
+	public var dir: String;
 }
 
 @:go.Type({ name: "packages", imports: ["golang.org/x/tools/go/packages"] })

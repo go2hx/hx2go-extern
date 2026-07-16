@@ -10,11 +10,11 @@ import std.go.types.Types.Slice;
 import std.go.types.Types.Pointer as PointerType;
 import std.go.packages.Packages;
 import go.Pointer;
-import std.go.os.Os;
+import go.Os;
 import std.go.types.Types.Var;
 import std.go.types.Types.Named;
-import std.go.os.exec.Cmd;
-import std.go.os.exec.Exec;
+import go.os.exec.Cmd;
+import go.os.Exec;
 import go.Go;
 import std.go.types.Types.Interface;
 import std.go.types.Types.Alias;
@@ -28,7 +28,37 @@ using StringTools;
 class Main {
 
     public static var didGen: Map<String, Bool> = new Map();
-    public static var topLevelName: String = "go2hx";
+    public static var topLevelName: String = "go";
+    public static var scratchDir: String = null;
+
+    static function ensureScratchModule(): String {
+        if (scratchDir != null) return scratchDir;
+
+        var dir = Os.tempDir() + "/go2hx-scratch";
+        Os.mkdirAll(dir, Syntax.code("0775"));
+
+        var res = Os.stat(dir + "/go.mod");
+        if (res.tuple().error != null) {
+            var cmd = Exec.command("go", "mod", "init", "go2hxscratch");
+            cmd.dir = dir;
+            cmd.run();
+        }
+
+        scratchDir = dir;
+        return dir;
+    }
+
+    static function ensureDependency(lib: String): Void {
+        var dir = ensureScratchModule();
+        var cmd = Exec.command("go", "get", lib);
+        cmd.dir = dir;
+
+        var err = cmd.run();
+        if (err != null) {
+            Sys.println('failed to fetch $lib: ${err.error()}');
+            Sys.exit(1);
+        }
+    }
 
     static function sanitize(name:String):String {
         return switch (name) {
@@ -78,6 +108,7 @@ class Main {
             case "while": "_while";
             case "from": "_from";
             case "to": "_to";
+            case "dynamic": "_dynamic";
 
             case _: name;
         }
@@ -211,8 +242,15 @@ class Main {
 
         Sys.println('generating "$lib"');
 
+        var loadDir = "";
+        if (lib.split("/")[0].contains(".")) {
+            ensureDependency(lib);
+            loadDir = ensureScratchModule();
+        }
+
         var config: Config = {
-            mode: LoadMode.needName.or(LoadMode.needTypes).or(LoadMode.needTypesInfo).or(LoadMode.needSyntax).or(LoadMode.needImports)
+            mode: LoadMode.needName.or(LoadMode.needTypes).or(LoadMode.needTypesInfo).or(LoadMode.needSyntax).or(LoadMode.needImports),
+            dir: loadDir
         };
 
         var entries = Packages.load(config, lib).sure();
@@ -249,9 +287,9 @@ class Main {
 
             for (name in scope.names()) {
                 var obj = scope.lookup(name);
-                if (!obj.exported()) {
-                    continue;
-                }
+//                if (!obj.exported()) {
+//                    continue;
+//                }
 
                 Syntax.code("switch {0}.(type) {", obj); // this is so bad :[
                 Syntax.code("case *types.TypeName:"); {
@@ -402,7 +440,7 @@ class Main {
                 isPkg = true;
             }
 
-            buf.add('package ${topLevelName}${relLib.length > 0 ? "." + relLib.replace("/", ".") : ""};\n');
+            buf.add('package ${topLevelName}${relLib.length > 0 ? "." + sanitizePackagePath(relLib) : ""};\n');
             buf.add('\n');
             if (out.isStruct == true) {
                 buf.add('@:structInit\n'); // TODO: generate constructor where everything is optional
@@ -420,7 +458,7 @@ class Main {
                 buf.add(out.instanceVars.toString());
                 if (out.staticVars.length > 0 || out.instanceVars.length > 0) buf.add('\n');
                 if (out.ctorParams.length > 0) {
-                    buf.add('function new(${out.ctorParams.join(", ")});\n\n');
+                    buf.add('    function new(${out.ctorParams.join(", ")});\n\n');
                 }
 
                 buf.add(out.staticFunctions.toString());
@@ -429,8 +467,8 @@ class Main {
                 buf.add("}");
             }
 
-            Os.mkdirAll('${output}/${topLevelName}/${relLib}', Syntax.code("0775"));
-            Os.writeFile('${output}/${topLevelName}/${relLib}/${toPascalCase(file)}.hx', cast buf.toString(), Syntax.code("0666"));
+            Os.mkdirAll('${output}/${topLevelName}/${sanitizePackageDir(relLib)}', Syntax.code("0775"));
+            Os.writeFile('${output}/${topLevelName}/${sanitizePackageDir(relLib)}/${toPascalCase(file)}.hx', cast buf.toString(), Syntax.code("0666"));
         }
     }
 
@@ -532,8 +570,30 @@ class Main {
         return v.value;
     }
 
+    static function sanitizeSegment(seg: String): String {
+        seg = seg.split(".").join("_");
+        seg = seg.split("-").join("_");
+        return seg;
+    }
+
+    static function sanitizePackagePath(path: String): String {
+        return path.split("/").map(sanitizeSegment).join(".");
+    }
+
+    static function sanitizePackageDir(path: String): String {
+        return path.split("/").map(sanitizeSegment).join("/");
+    }
+
     static function resolvePath(path: String): String {
-        return '${topLevelName}.${path.replace("/", ".")}'; // TODO: this is a stub
+        var lastSlash = path.lastIndexOf("/");
+        var pkgPath = lastSlash == -1 ? "" : path.substr(0, lastSlash);
+        var rest = lastSlash == -1 ? path : path.substr(lastSlash + 1);
+        var dotIdx = rest.indexOf(".");
+        var pkgBase = rest.substr(0, dotIdx);
+        var typeName = rest.substr(dotIdx + 1);
+        var fullPkgPath = pkgPath.length > 0 ? '${pkgPath}/${pkgBase}' : pkgBase;
+
+        return '${topLevelName}.${sanitizePackagePath(fullPkgPath)}.${toPascalCase(typeName)}';
     }
 
     static function isNamedType(t:std.go.types.Types.Type): Bool {
@@ -565,6 +625,19 @@ class Main {
 
         if (s.startsWith("untyped ")) {
             s = s.substr(8);
+        }
+
+        if (s.startsWith("invalid type")) {
+            return "Dynamic";
+        }
+
+        if (isInterfaceType(t) && !isNamedType(t)) {
+            var iface = typeAs(t, Interface);
+            if (iface.numMethods() == 0) {
+                return "Dynamic" + tParamStr;
+            }
+
+            return "Dynamic" + tParamStr;
         }
 
         var q = switch s {
