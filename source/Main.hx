@@ -234,7 +234,7 @@ class Main {
     }
 
     static function genLib(lib: String, output: String): Void {
-        if (didGen.exists(lib)) {
+        if (didGen.exists(lib) || lib.split("/").contains("internal")) {
             return;
         }
 
