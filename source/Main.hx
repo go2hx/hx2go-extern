@@ -131,27 +131,7 @@ class Main {
 
         var output = args[1];
         var lib = args[0];
-
-        if (lib == "*") {
-            genStd(output);
-        } else {
-            genLib(lib, output);
-        }
-    }
-
-    static function genStd(output: String): Void {
-        var cmd: Pointer<Cmd> = Exec.command("go", "list", "std");
-        var result: String = Go.string(cmd.value.output().sure());
-
-        for (pkg in result.split("\n")) {
-            pkg = pkg.trim();
-
-            if (pkg.length == 0) {
-                continue;
-            }
-
-            genLib(pkg, output);
-        }
+        genLib(lib, output);
     }
 
     static function isExportedType(t:std.go.types.Types.Type):Bool {
