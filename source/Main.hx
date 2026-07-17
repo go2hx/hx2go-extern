@@ -28,6 +28,7 @@ using StringTools;
 class Main {
 
     public static var didGen: Map<String, Bool> = new Map();
+    static var mutex = new sys.thread.Mutex();
     public static var topLevelName: String = "go";
     public static var scratchDir: String = null;
 
@@ -57,60 +58,6 @@ class Main {
         if (err != null) {
             Sys.println('failed to fetch $lib: ${err.error()}');
             Sys.exit(1);
-        }
-    }
-
-    static function sanitize(name:String):String {
-        return switch (name) {
-            case "abstract": "_abstract";
-            case "break": "_break";
-            case "case": "_case";
-            case "cast": "_cast";
-            case "catch": "_catch";
-            case "class": "_class";
-            case "continue": "_continue";
-            case "default": "_default";
-            case "do": "_do";
-            case "else": "_else";
-            case "enum": "_enum";
-            case "extends": "_extends";
-            case "extern": "_extern";
-            case "false": "_false";
-            case "final": "_final";
-            case "for": "_for";
-            case "function": "_function";
-            case "if": "_if";
-            case "implements": "_implements";
-            case "import": "_import";
-            case "in": "_in";
-            case "interface": "iface";
-            case "inline": "_inline";
-            case "is": "_is";
-            case "macro": "_macro";
-            case "new": "_new";
-            case "null": "_null";
-            case "override": "_override";
-            case "package": "_package";
-            case "private": "_private";
-            case "public": "_public";
-            case "return": "_return";
-            case "static": "_static";
-            case "super": "_super";
-            case "switch": "_switch";
-            case "this": "_this";
-            case "throw": "_throw";
-            case "true": "_true";
-            case "try": "_try";
-            case "typedef": "_typedef";
-            case "untyped": "_untyped";
-            case "using": "_using";
-            case "var": "_var";
-            case "while": "_while";
-            case "from": "_from";
-            case "to": "_to";
-            case "dynamic": "_dynamic";
-
-            case _: name;
         }
     }
 
@@ -214,11 +161,14 @@ class Main {
     }
 
     static function genLib(lib: String, output: String): Void {
+        mutex.acquire();
         if (didGen.exists(lib) || lib.split("/").contains("internal")) {
+            mutex.release();
             return;
         }
 
         didGen.set(lib, true);
+        mutex.release();
 
         Sys.println('generating "$lib"');
 
@@ -262,7 +212,7 @@ class Main {
         for (entry in entries) {
             var scope = entry.value.types.value.scope().value;
             for (dep in entry.value.imports.keys()) {
-                genLib(dep, output);
+                Syntax.go(() -> genLib(dep, output));
             }
 
             for (name in scope.names()) {
@@ -318,7 +268,7 @@ class Main {
                                     }
 
                                     var fname = field.name();
-                                    var p = '${sanitize(toHaxeCase(fname))}: ${genType(field.type())}';
+                                    var p = '${Sanitize.name(toHaxeCase(fname))}: ${genType(field.type())}';
                                     out.instanceVars.add('    @:native("${fname}") var ${p};\n');
                                     out.ctorParams.push(p);
                                 }
@@ -379,7 +329,7 @@ class Main {
                     var name = v.name();
                     var type = v.type();
 
-                    buf.add('    @:native("${name}") static var ${sanitize(name)}: ${genType(type)};\n');
+                    buf.add('    @:native("${name}") static var ${Sanitize.name(name)}: ${genType(type)};\n');
                 }
 
                 Syntax.code("case *types.Const:"); {
@@ -394,7 +344,7 @@ class Main {
                     var name = c.name();
                     var type = c.type();
 
-                    buf.add('    @:native("${name}") static var ${sanitize(name)}: ${genType(type)};\n');
+                    buf.add('    @:native("${name}") static var ${Sanitize.name(name)}: ${genType(type)};\n');
                 }
 
                 Syntax.code("default:"); {
@@ -420,7 +370,7 @@ class Main {
                 isPkg = true;
             }
 
-            buf.add('package ${topLevelName}${relLib.length > 0 ? "." + sanitizePackagePath(relLib) : ""};\n');
+            buf.add('package ${topLevelName}${relLib.length > 0 ? "." + Sanitize.packagePath(relLib) : ""};\n');
             buf.add('\n');
             if (out.isStruct == true) {
                 buf.add('@:structInit\n'); // TODO: generate constructor where everything is optional
@@ -447,8 +397,8 @@ class Main {
                 buf.add("}");
             }
 
-            Os.mkdirAll('${output}/${topLevelName}/${sanitizePackageDir(relLib)}', Syntax.code("0775"));
-            Os.writeFile('${output}/${topLevelName}/${sanitizePackageDir(relLib)}/${toPascalCase(file)}.hx', cast buf.toString(), Syntax.code("0666"));
+            Os.mkdirAll('${output}/${topLevelName}/${Sanitize.packageDir(relLib)}', Syntax.code("0775"));
+            Os.writeFile('${output}/${topLevelName}/${Sanitize.packageDir(relLib)}/${toPascalCase(file)}.hx', cast buf.toString(), Syntax.code("0666"));
         }
     }
 
@@ -503,7 +453,7 @@ class Main {
             tParamsStr = '<' + tParamsLocal.join(", ") + '>';
         }
 
-        return '${meta}${topLevel && !closure ? "static " : ""}${closure ? "" : 'function ${sanitize(toHaxeCase(name))}'}${tParamsStr}(${params.join(", ")})${closure ? ' -> ' : ': '}${results.len() == 0 ? "Void" :genResults(results)}${closure ? "" : ";"}';
+        return '${meta}${topLevel && !closure ? "static " : ""}${closure ? "" : 'function ${Sanitize.name(toHaxeCase(name))}'}${tParamsStr}(${params.join(", ")})${closure ? ' -> ' : ': '}${results.len() == 0 ? "Void" :genResults(results)}${closure ? "" : ";"}';
     }
 
     static function isResultType(args:std.go.types.Types.Tuple) {
@@ -538,7 +488,7 @@ class Main {
             items.push(
                 if (ret) genType(v.type());
                 else if (varadic && isLastArg) n + ": haxe.Rest<" + genType(typeAs(v.type(), Slice).elem()) + ">";
-                else sanitize(n) + ": " + genType(v.type())
+                else Sanitize.name(n) + ": " + genType(v.type())
             );
         }
 
@@ -550,20 +500,6 @@ class Main {
         return v.value;
     }
 
-    static function sanitizeSegment(seg: String): String {
-        seg = seg.split(".").join("_");
-        seg = seg.split("-").join("_");
-        return seg;
-    }
-
-    static function sanitizePackagePath(path: String): String {
-        return path.split("/").map(sanitizeSegment).join(".");
-    }
-
-    static function sanitizePackageDir(path: String): String {
-        return path.split("/").map(sanitizeSegment).join("/");
-    }
-
     static function resolvePath(path: String): String {
         var lastSlash = path.lastIndexOf("/");
         var pkgPath = lastSlash == -1 ? "" : path.substr(0, lastSlash);
@@ -573,7 +509,7 @@ class Main {
         var typeName = rest.substr(dotIdx + 1);
         var fullPkgPath = pkgPath.length > 0 ? '${pkgPath}/${pkgBase}' : pkgBase;
 
-        return '${topLevelName}.${sanitizePackagePath(fullPkgPath)}.${toPascalCase(typeName)}';
+        return '${topLevelName}.${Sanitize.packagePath(fullPkgPath)}.${toPascalCase(typeName)}';
     }
 
     static function isNamedType(t:std.go.types.Types.Type): Bool {
