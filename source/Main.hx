@@ -170,7 +170,7 @@ class Main {
                     var name = v.name();
                     var type = v.type();
 
-                    buf.add('    @:native("${name}") static var ${Sanitize.name(name)}: ${genType(type)};\n');
+                    buf.add('    @:native("${name}") static var ${Sanitize.name(toHaxeCase(name))}: ${genType(type)};\n');
                 }
 
                 Syntax.code("case *types.Const:"); {
