@@ -1,27 +1,28 @@
-import std.go.types.Types.TypeName;
 import go.Syntax;
 import go.Map;
-import std.go.types.Types.Signature;
-import std.go.types.Types.Func;
 using StringTools;
 
-import std.go.types.Types.Chan;
-import std.go.types.Types.Slice;
-import std.go.types.Types.Pointer as PointerType;
+
+import go.go.types.Slice as SliceType;
+import go.go.types.Array as ArrayType;
+import go.go.types.Pointer as PointerType;
+import go.go.types.Signature;
+import go.go.types.Func;
+import go.go.types.Var;
+import go.go.types.Named;
+import go.go.types.Interface;
+import go.go.types.Alias;
+import go.go.types.Struct;
+import go.go.types.Chan as ChanType;
+
 import std.go.packages.Packages;
 import go.Pointer;
 import go.Os;
-import std.go.types.Types.Var;
-import std.go.types.Types.Named;
 import go.os.exec.Cmd;
 import go.os.Exec;
 import go.Go;
-import std.go.types.Types.Interface;
-import std.go.types.Types.Alias;
-import std.go.types.Types.Struct;
 import go.haxe.HxArray;
 import go.haxe.HxDynamic;
-import std.go.types.Types.Array as ArrayType;
 
 using StringTools;
 
@@ -81,85 +82,6 @@ class Main {
         genLib(lib, output);
     }
 
-    static function isExportedType(t:std.go.types.Types.Type):Bool {
-        if (isNamedType(t)) {
-            var named = typeAs(t, Named);
-            return named.obj().value.exported();
-        }
-
-        var s = t.string();
-
-        if (s.startsWith("*")) {
-            return isExportedType(typeAs(t, PointerType).elem());
-        }
-
-        if (s.startsWith("[]")) {
-            return isExportedType(typeAs(t, Slice).elem());
-        }
-
-        if (s.startsWith("chan ")) {
-            return isExportedType(typeAs(t, Chan).elem());
-        }
-
-        return true;
-    }
-
-    static function isInterfaceType(t:std.go.types.Types.Type):Bool {
-        var result = false;
-
-        Syntax.code("
-            if _, ok := t.(*types.Interface); ok {
-                result = true;
-            }
-        ");
-
-        return result;
-    }
-
-    static function getUnderlying(t:std.go.types.Types.Type):std.go.types.Types.Type {
-        if (isNamedType(t)) {
-            return typeAs(t, Named).underlying();
-        }
-
-        return t;
-    }
-
-    static function isBasicType(t:std.go.types.Types.Type):Bool {
-        var result = false;
-
-        Syntax.code("
-            if _, ok := t.(*types.Basic); ok {
-                result = true;
-            }
-        ");
-
-        return result;
-    }
-
-    static function isStructType(t:std.go.types.Types.Type):Bool {
-        var result = false;
-
-        Syntax.code("
-        if _, ok := t.(*types.Struct); ok {
-            result = true;
-        }
-    ");
-
-        return result;
-    }
-
-    static function isArrayType(t:std.go.types.Types.Type):Bool {
-        var result = false;
-
-        Syntax.code("
-        if _, ok := t.(*types.Array); ok {
-            result = true;
-        }
-    ");
-
-        return result;
-    }
-
     static function genLib(lib: String, output: String): Void {
         mutex.acquire();
         if (didGen.exists(lib) || lib.split("/").contains("internal")) {
@@ -184,9 +106,9 @@ class Main {
         };
 
         var entries = Packages.load(config, lib).sure();
-        var outputs: Map<String, { ctorParams: Array<String>, isStruct: Bool, typedefStr: Null<String>, consts: StringBuf, isInterface: Bool, paramStr: String, staticFunctions: StringBuf, instanceFunctions: StringBuf, staticVars: StringBuf, instanceVars: StringBuf }> = new Map();
+        var outputs: Map<String, GenOutput> = new Map();
 
-        function getOutput(name: String) {
+        function getOutput(name: String): GenOutput {
             if (name == lib.split("/").pop()) {
                 name = "@package";
             }
@@ -222,91 +144,10 @@ class Main {
 //                }
 
                 Syntax.code("switch {0}.(type) {", obj); // this is so bad :[
-                Syntax.code("case *types.TypeName:"); {
-                    var type = typeAs(obj, TypeName);
-                    var out = getOutput(obj.name());
-                    var underlying = getUnderlying(type.type());
-
-                    var resolvedTo = std.go.types.Types.Types.unalias(type.type());
-                    if (resolvedTo == type.type() && isNamedType(resolvedTo)) {
-                        var named = typeAs(resolvedTo, Named);
-                        resolvedTo = named.underlying();
-                    }
-
-                    if (isInterfaceType(underlying)) {
-                        var iface = typeAs(underlying, Interface);
-                        out.isInterface = true;
-
-                        iface.complete();
-
-                        for (i in 0...iface.numMethods()) {
-                            var method = typeAs(iface.method(i), Func);
-                            if (!method.exported()) {
-                                continue;
-                            }
-
-                            var sig = method.signature().value;
-                            out.instanceFunctions.add('    ${genFunc(method.name(), sig, false, false)}\n');
-                        }
-                    } else if (type.isAlias() && (isNamedType(resolvedTo) || isBasicType(resolvedTo))) { // TODO: support for func() aswell (see iter.Seq)
-                        out.typedefStr = genType(resolvedTo);
-                    } else {
-                        var isNamed = isNamedType(type.type());
-                        var out = getOutput(obj.name());
-
-                        if (isNamed) {
-                            var named = typeAs(type.type(), Named);
-
-                            if (isStructType(underlying)) {
-                                out.isStruct = true;
-                                var struct = typeAs(underlying, Struct);
-
-                                for (i in 0...struct.numFields()) {
-                                    var field = typeAs(struct.field(i), Var);
-                                    if (!field.exported()) {
-                                        continue;
-                                    }
-
-                                    var fname = field.name();
-                                    var p = '${Sanitize.name(toHaxeCase(fname))}: ${genType(field.type())}';
-                                    out.instanceVars.add('    @:native("${fname}") var ${p};\n');
-                                    out.ctorParams.push(p);
-                                }
-                            }
-
-                            var tp = named.typeParams();
-                            if (tp != null) {
-                                var params = [];
-                                var tps = tp.value;
-
-                                for (i in 0...tps.len()) {
-                                    var t = tps.at(i).value;
-                                    var constraint = t.constraint();
-                                    var constraintStr = genType(constraint);
-                                    params.push('${t.string()}: ${constraintStr}');
-                                }
-
-                                out.paramStr = params.length == 0 ? "" : "<" + params.join(", ") + ">";
-                            }
-
-                            var methodSet = std.go.types.Types.newMethodSet(Syntax.code("types.NewPointer({0})", type.type()));
-                            for (i in 0...methodSet.value.len()) {
-                                var sel = methodSet.value.at(i).value;
-                                var method = typeAs(sel.obj(), Func);
-
-                                if (!method.exported()) {
-                                    continue;
-                                }
-
-                                var sig = method.signature().value;
-                                out.instanceFunctions.add('    ${genFunc(method.name(), sig, false)}\n');
-                            }
-                        }
-                    }
-                }
-
+                Syntax.code("case *types.TypeName:");
+                    GenTypeName.gen(obj, getOutput);
                 Syntax.code("case *types.Func:"); {
-                    var func = typeAs(obj, Func);
+                    var func = TypeHelper.typeAs(obj, Func);
                     var sig = func.signature().value;
                     var recv = sig.recv();
                     var buf = getOutput(entry.value.name).staticFunctions;
@@ -320,8 +161,8 @@ class Main {
                 }
 
                 Syntax.code("case *types.Var:"); {
-                    var v = typeAs(obj, Var);
-                    if (!isExportedType(v.type())) {
+                    var v = TypeHelper.typeAs(obj, Var);
+                    if (!TypeHelper.isExportedType(v.type())) {
                         continue;
                     }
 
@@ -333,7 +174,7 @@ class Main {
                 }
 
                 Syntax.code("case *types.Const:"); {
-                    var c = typeAs(obj, std.go.types.Types.Const);
+                    var c = TypeHelper.typeAs(obj, go.go.types.Const);
 
                     if (!c.exported()) {
                         continue;
@@ -410,7 +251,7 @@ class Main {
         return '';
     }
 
-    static function genFunc(name: String, sig: Signature, topLevel:Bool, closure: Bool = false) {
+    public static function genFunc(name: String, sig: Signature, topLevel:Bool, closure: Bool = false) {
         var recv = sig.recv();
         var params = sig.params()?.value ?? null;
         var results = sig.results()?.value ?? null;
@@ -456,11 +297,11 @@ class Main {
         return '${meta}${topLevel && !closure ? "static " : ""}${closure ? "" : 'function ${Sanitize.name(toHaxeCase(name))}'}${tParamsStr}(${params.join(", ")})${closure ? ' -> ' : ': '}${results.len() == 0 ? "Void" :genResults(results)}${closure ? "" : ";"}';
     }
 
-    static function isResultType(args:std.go.types.Types.Tuple) {
+    static function isResultType(args:go.go.types.Tuple) {
         return args.len() == 2 && args.at(1).value.type().string() == "error";
     }
 
-    static function genResults(args:std.go.types.Types.Tuple) {
+    static function genResults(args:go.go.types.Tuple) {
         if (args.len() > 1) {
             if (isResultType(args)) {
                 return 'go.Result<${genType(args.at(0).value.type())}>';
@@ -472,7 +313,7 @@ class Main {
         }
     }
 
-    static function genTuple(args:std.go.types.Types.Tuple, varadic: Bool = false, ret: Bool = false) {
+    static function genTuple(args:go.go.types.Tuple, varadic: Bool = false, ret: Bool = false) {
         var items = [];
         var idx = 0;
 
@@ -487,17 +328,12 @@ class Main {
 
             items.push(
                 if (ret) genType(v.type());
-                else if (varadic && isLastArg) n + ": haxe.Rest<" + genType(typeAs(v.type(), Slice).elem()) + ">";
+                else if (varadic && isLastArg) n + ": haxe.Rest<" + genType(TypeHelper.typeAs(v.type(), SliceType).elem()) + ">";
                 else Sanitize.name(n) + ": " + genType(v.type())
             );
         }
 
         return items;
-    }
-
-    inline extern static function typeAs<V, T>(value: V, as: Class<T>): T {
-        var v: Pointer<T> = cast (value : Dynamic);
-        return v.value;
     }
 
     static function resolvePath(path: String): String {
@@ -512,19 +348,12 @@ class Main {
         return '${topLevelName}.${Sanitize.packagePath(fullPkgPath)}.${toPascalCase(typeName)}';
     }
 
-    static function isNamedType(t:std.go.types.Types.Type): Bool {
-        var isNamed = false;
-        Syntax.code("if _, ntOk := t.(*types.Named); ntOk { isNamed = true; }");
-
-        return isNamed;
-    }
-
-    static function genType(t: std.go.types.Types.Type): String {
+    public static function genType(t: go.go.types.Type): String {
         var s = t.string();
         var tParamStr = '';
 
-        if (isNamedType(t) && typeAs(t, Named).typeArgs() != null) {
-            var typeParams = typeAs(t, Named).typeArgs().value;
+        if (TypeHelper.isNamedType(t) && TypeHelper.typeAs(t, Named).typeArgs() != null) {
+            var typeParams = TypeHelper.typeAs(t, Named).typeArgs().value;
             var typeParamStrs = [];
             for (i in 0...typeParams.len()) {
                 typeParamStrs.push(genType(typeParams.at(i)));
@@ -547,8 +376,8 @@ class Main {
             return "Dynamic";
         }
 
-        if (isInterfaceType(t) && !isNamedType(t)) {
-            var iface = typeAs(t, Interface);
+        if (TypeHelper.isInterfaceType(t) && !TypeHelper.isNamedType(t)) {
+            var iface = TypeHelper.typeAs(t, Interface);
             if (iface.numMethods() == 0) {
                 return "Dynamic" + tParamStr;
             }
@@ -587,11 +416,11 @@ class Main {
             case "complex64": "go.Complex64";
             case "comparable": "go.Comparable";
 
-            case _ if (s.substr(0, 7) == "chan<- "): 'go.Chan<${genType(typeAs(t, Chan).elem())}>';
-            case _ if (s.substr(0, 5) == "chan "): 'go.Chan<${genType(typeAs(t, Chan).elem())}>';
-            case _ if (s.substr(0, 7) == "<-chan "): 'go.Chan<${genType(typeAs(t, Chan).elem())}>';
-            case _ if (s.substr(0, 2) == "[]"): 'go.Slice<${genType(typeAs(t, Slice).elem())}>';
-            case _ if (s.substr(0, 1) == "*"): 'go.Pointer<${genType(typeAs(t, PointerType).elem())}>';
+            case _ if (s.substr(0, 7) == "chan<- "): 'go.Chan<${genType(TypeHelper.typeAs(t, ChanType).elem())}>';
+            case _ if (s.substr(0, 5) == "chan "): 'go.Chan<${genType(TypeHelper.typeAs(t, ChanType).elem())}>';
+            case _ if (s.substr(0, 7) == "<-chan "): 'go.Chan<${genType(TypeHelper.typeAs(t, ChanType).elem())}>';
+            case _ if (s.substr(0, 2) == "[]"): 'go.Slice<${genType(TypeHelper.typeAs(t, SliceType).elem())}>';
+            case _ if (s.substr(0, 1) == "*"): 'go.Pointer<${genType(TypeHelper.typeAs(t, PointerType).elem())}>';
 
             case _ if (s.replace(" ", "").startsWith("struct{")): {
                 // TODO: generate struct type
@@ -599,18 +428,18 @@ class Main {
             }
 
             case _ if (s.startsWith("map[")): {
-                var keyType = typeAs(t, std.go.types.Types.Map).key();
-                var elemType = typeAs(t, std.go.types.Types.Map).elem();
+                var keyType = TypeHelper.typeAs(t, go.go.types.Map).key();
+                var elemType = TypeHelper.typeAs(t, go.go.types.Map).elem();
                 'go.Map<${genType(keyType)}, ${genType(elemType)}>';
             }
 
             case _ if (s.startsWith('func')): {
-                var sig = typeAs(t, Signature);
+                var sig = TypeHelper.typeAs(t, Signature);
                 genFunc('', sig, false, true);
             }
 
-            case _ if (isArrayType(t)): {
-                var arr = typeAs(t, ArrayType);
+            case _ if (TypeHelper.isArrayType(t)): {
+                var arr = TypeHelper.typeAs(t, ArrayType);
                 'go.GoArray<${genType(arr.elem())}, ${arr.len()}>';
             }
 
@@ -627,7 +456,7 @@ class Main {
 }
 
 interface ElemType {
-    public function elem():std.go.types.Types.Type;
+    public function elem():go.go.types.Type;
 }
 
 // walk packages -> files -> types + recv funcs and funcs

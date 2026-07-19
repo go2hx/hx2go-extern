@@ -5,10 +5,10 @@ import go.Pointer;
 import go.Map;
 import go.Result;
 import go.Int64;
-import std.go.types.Types.Package as TypesPackage;
-import std.go.types.Types.Info as TypesInfo;
-import std.go.types.Types.Sizes as TypesSizes;
-import std.go.types.Types.Package as TypesPackage;
+import go.go.types.Package as TypesPackage;
+import go.go.types.Info as TypesInfo;
+import go.go.types.Sizes as TypesSizes;
+import go.go.types.Package as TypesPackage;
 import std.go.token.FileSet;
 import std.go.ast.Ast.File;
 
