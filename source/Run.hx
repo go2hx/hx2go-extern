@@ -4,11 +4,20 @@ import sys.FileSystem;
 function main() {
     var go2hxPath = Sys.getCwd();
     var go2hxFilePath = Path.join([ go2hxPath, 'binary', 'go2hx' ]);
+    var bin = Path.join([ go2hxPath, 'binary', 'go2hx' , 'main', executable('main')]);
 
     if (!FileSystem.exists(go2hxFilePath)) {
         Sys.println('go2hx has not been built yet, doing so now');
         Sys.command("haxe Compile.hxml");
     }
 
-    Sys.command("go", ["-C", "./binary/go2hx/main", "run", "."].concat(Sys.args()));
+    Sys.command(bin, [].concat(Sys.args()));
+}
+
+private function executable(path: String): String {
+	return if (Sys.systemName().toLowerCase() == "windows") {
+		path + '.exe';
+	}else{
+		path;
+	}
 }
