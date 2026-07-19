@@ -1,3 +1,4 @@
+import haxe.io.Path;
 import go.Syntax;
 import go.Map;
 using StringTools;
@@ -70,21 +71,29 @@ class Main {
         return input.charAt(0).toUpperCase() + input.substr(1);
     }
 
+    static var initLib = "";
+
     public static function main() {
         var args = Sys.args();
+        var wd = args.pop();
         if (args.length < 2) {
             Sys.println("Usage: go2hx <lib> <output>");
             Sys.exit(1);
         }
 
-        var output = args[1];
-        var lib = args[0];
-        genLib(lib, output);
+        var output = Path.join([wd, args[1]]);
+        initLib = args[0];
+        genLib(initLib, output);
     }
 
     static function genLib(lib: String, output: String): Void {
         mutex.acquire();
-        if (didGen.exists(lib) || lib.split("/").contains("internal")) {
+        var parts = lib.split("/");
+        if (didGen.exists(lib) || parts.contains("internal")) {
+            mutex.release();
+            return;
+        }
+        if (initLib == "std" && parts.contains("golang.org")) {
             mutex.release();
             return;
         }
