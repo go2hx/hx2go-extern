@@ -71,8 +71,8 @@ class GenTypeName {
                 }
 
                 var methodSet = go.go.Types.newMethodSet(Syntax.code("types.NewPointer({0})", type.type()));
-                for (i in 0...methodSet.value.len()) {
-                    var sel = methodSet.value.at(i).value;
+                for (i in 0...methodSet.len()) {
+                    var sel = methodSet.at(i);
                     var method = TypeHelper.typeAs(sel.obj(), Func);
 
                     if (!method.exported()) {

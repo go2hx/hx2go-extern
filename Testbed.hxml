@@ -2,5 +2,5 @@
 -cp output
 -main Main
 -L hx2go
---custom-target go=binary/testbed
---cmd go -C ./binary/testbed/main run .
+--custom-target go=output/testbed
+--cmd go -C ./output/testbed/main run .

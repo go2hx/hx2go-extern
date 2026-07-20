@@ -1,2 +1,3 @@
-Compile.hxml
---cmd go -C ./binary/go2hx/main run . "*" "/home/mikaib/Documents/go2hx-v2/output"
+#Compile.hxml
+#--cmd go work init output/main || exit 0
+--cmd go run ./output/main std golang.org/x/tools "./output"

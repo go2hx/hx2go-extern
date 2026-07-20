@@ -2,5 +2,5 @@
 -main Main
 -L hx2go
 -D go-bootstrap
---custom-target go=binary/go2hx
---cmd go build -C "binary/go2hx/main" .
+--custom-target go=output
+--cmd go build -C "output/main" .

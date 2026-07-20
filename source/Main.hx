@@ -63,11 +63,20 @@ class Main {
         }
     }
 
+    public static function toHaxeCaseWithUnderscore(input: String): String {
+        if (input.charAt(0) == input.charAt(0).toLowerCase())
+            return "_" + input;
+        return toHaxeCase(input);
+    }
+
     public static function toHaxeCase(input: String): String {
         return input == input.toUpperCase() ? input : input.charAt(0).toLowerCase() + input.substr(1);
     }
 
     public static function toPascalCase(input: String): String {
+        if (input.charAt(0) == input.charAt(0).toLowerCase()) {
+            return 'T' + input;
+        }
         return input.charAt(0).toUpperCase() + input.substr(1);
     }
 
@@ -179,7 +188,7 @@ class Main {
                     var name = v.name();
                     var type = v.type();
 
-                    buf.add('    @:native("${name}") static var ${Sanitize.name(toHaxeCase(name))}: ${genType(type)};\n');
+                    buf.add('    @:native("${name}") static var ${Sanitize.name(toHaxeCaseWithUnderscore(name))}: ${genType(type)};\n');
                 }
 
                 Syntax.code("case *types.Const:"); {
@@ -298,12 +307,12 @@ class Main {
                 var constraint = t.constraint();
                 var constraintStr = genType(constraint);
 
-                tParamsLocal.push('${t.string()}: ${constraintStr}');
+                tParamsLocal.push('${toPascalCase(t.string())}: ${constraintStr}');
             }
             tParamsStr = '<' + tParamsLocal.join(", ") + '>';
         }
-
-        return '${meta}${topLevel && !closure ? "static " : ""}${closure ? "" : 'function ${Sanitize.name(toHaxeCase(name))}'}${tParamsStr}(${params.join(", ")})${closure ? ' -> ' : ': '}${results.len() == 0 ? "Void" :genResults(results)}${closure ? "" : ";"}';
+        
+        return '${meta}${topLevel && !closure ? "static " : ""}${closure ? "" : 'function ${Sanitize.name(toHaxeCaseWithUnderscore(name))}'}${tParamsStr}(${params.join(", ")})${closure ? ' -> ' : ': '}${results.len() == 0 ? "Void" :genResults(results)}${closure ? "" : ";"}';
     }
 
     static function isResultType(args:go.go.types.Tuple) {
@@ -318,7 +327,7 @@ class Main {
 
             return 'go.Tuple<{ ' + genTuple(args, false, false).join(", ") + ' }>';
         }else{
-            return genTuple(args, false, true).join(", ");
+            return '(' + genTuple(args, false, true).join(", ") + ')';
         }
     }
 

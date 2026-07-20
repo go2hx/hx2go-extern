@@ -3,8 +3,8 @@ import sys.FileSystem;
 
 function main() {
     var go2hxPath = Sys.getCwd();
-    var go2hxFilePath = Path.join([ go2hxPath, 'binary', 'go2hx' ]);
-    var bin = Path.join([ go2hxPath, 'binary', 'go2hx' , 'main', executable('main')]);
+    var go2hxFilePath = Path.join([ go2hxPath, 'output', 'main' ]);
+    var bin = Path.join([ go2hxPath, 'output', 'main', executable('main')]);
 
     if (!FileSystem.exists(go2hxFilePath)) {
         Sys.println('go2hx has not been built yet, doing so now');

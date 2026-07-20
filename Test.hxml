@@ -1,3 +1,3 @@
 Compile.hxml
---cmd go work init binary/go2hx/main || exit 0
---cmd go run ./binary/go2hx/main std "/output"
+--cmd go work init output/main || exit 0
+--cmd go run ./output/main std "./output"
