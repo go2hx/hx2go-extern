@@ -1,5 +1,6 @@
 import go.go.types.*;
 import go.Syntax;
+import go.Map;
 
 class GenTypeName {
     public static function gen(obj:Object, getOutput:String->GenOutput) {
@@ -40,19 +41,7 @@ class GenTypeName {
 
                 if (TypeHelper.isStructType(underlying)) {
                     out.isStruct = true;
-                    var struct = TypeHelper.typeAs(underlying, Struct);
-
-                    for (i in 0...struct.numFields()) {
-                        var field = TypeHelper.typeAs(struct.field(i), Var);
-                        if (!field.exported()) {
-                            continue;
-                        }
-
-                        var fname = field.name();
-                        var p = '${Sanitize.name(Main.toHaxeCase(fname))}: ${Main.genType(field.type())}';
-                        out.instanceVars.add('    @:native("${fname}") var ${p};\n');
-                        out.ctorParams.push(p);
-                    }
+                    addStructFields(underlying, out);
                 }
 
                 var tp = named.typeParams();
@@ -85,4 +74,52 @@ class GenTypeName {
             }
         }
     }
+
+    static function addStructFields(t: go.go.types.Type, out: GenOutput) {
+        addStructFieldsRec(t, out, 0, new Map<String, Bool>());
     }
+
+    static function addStructFieldsRec(t: go.go.types.Type, out: GenOutput, depth: Int, seen: Map<String, Bool>) {
+        // guard against cyclic embeds e.g. mutual *T
+        if (depth > 16) {
+            return;
+        }
+
+        var struct = TypeHelper.typeAs(t, Struct);
+
+        for (i in 0...struct.numFields()) {
+            var field = TypeHelper.typeAs(struct.field(i), Var);
+            var fname = field.name();
+            if (!field.exported() || seen.exists(fname)) {
+                continue;
+            }
+            seen.set(fname, true);
+
+            var p = '${Sanitize.name(Main.toHaxeCase(fname))}: ${Main.genType(field.type())}';
+            out.instanceVars.add('    @:native("${fname}") var ${p};\n');
+            if (depth == 0) {
+                out.ctorParams.push(p);
+            }
+        }
+
+        for (i in 0...struct.numFields()) {
+            var field = TypeHelper.typeAs(struct.field(i), Var);
+            if (!field.embedded()) {
+                continue;
+            }
+            var est = embeddedStructType(field.type());
+            if (est != null) {
+                addStructFieldsRec(est, out, depth + 1, seen);
+            }
+        }
+    }
+
+    static function embeddedStructType(t: go.go.types.Type): go.go.types.Type {
+        if (t.string().charAt(0) == "*") {
+            t = TypeHelper.typeAs(t, Pointer).elem();
+        }
+
+        var u = TypeHelper.getUnderlying(t);
+        return TypeHelper.isStructType(u) ? u : null;
+    }
+}

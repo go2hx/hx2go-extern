@@ -6,7 +6,9 @@ function main() {
     var go2hxFilePath = Path.join([ go2hxPath, 'output', 'main' ]);
     var bin = Path.join([ go2hxPath, 'output', 'main', executable('main')]);
 
-    if (!FileSystem.exists(go2hxFilePath)) {
+    var args = Sys.args();
+
+    if (!FileSystem.exists(go2hxFilePath) || (args.length > 0 && args[0] == "rebuild")) {
         Sys.println('go2hx has not been built yet, doing so now');
         Sys.command("haxe Compile.hxml");
     }

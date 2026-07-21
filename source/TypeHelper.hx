@@ -55,6 +55,18 @@ class TypeHelper {
         return result;
     }
 
+    public static function isTypeParamType(t:go.go.types.Type):Bool {
+        var result = false;
+
+        Syntax.code("
+            if _, ok := t.(*types.TypeParam); ok {
+                result = true;
+            }
+        ");
+
+        return result;
+    }
+
     public static function getUnderlying(t:go.go.types.Type):go.go.types.Type {
         if (TypeHelper.isNamedType(t)) {
             // TODO: change out temp fix

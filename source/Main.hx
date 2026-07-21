@@ -1,3 +1,5 @@
+import sys.io.File;
+import sys.FileSystem;
 import haxe.io.Path;
 import go.Syntax;
 import go.Map;
@@ -24,6 +26,7 @@ import go.os.Exec;
 import go.Go;
 import go.haxe.HxArray;
 import go.haxe.HxDynamic;
+import go.Reflect;
 
 using StringTools;
 
@@ -74,56 +77,95 @@ class Main {
     }
 
     public static function toPascalCase(input: String): String {
-        if (input.charAt(0) == input.charAt(0).toLowerCase()) {
-            return 'T' + input;
+        var first = input.charAt(0);
+        var isLetter = (first >= "a" && first <= "z") || (first >= "A" && first <= "Z");
+        if (!isLetter) {
+            return "T" + input;
         }
-        return input.charAt(0).toUpperCase() + input.substr(1);
+        return first.toUpperCase() + input.substr(1);
     }
 
-    static var initLib = "";
+    static var initLibs = [];
 
     public static function main() {
         var args = Sys.args();
-        var wd = args.pop();
         if (args.length < 2) {
-            Sys.println("Usage: go2hx <lib> <output>");
+            Sys.println("Usage: go2hx <lib>... <output>");
             Sys.exit(1);
         }
-
-        var output = Path.join([wd, args[1]]);
-        initLib = args[0];
-        genLib(initLib, output);
+        // last arg is the output directory
+        Sys.setCwd(args.pop());
+        var output = args.pop();
+        initLibs = args;
+        genLibs(initLibs.copy(), output);
     }
 
-    static function genLib(lib: String, output: String): Void {
-        mutex.acquire();
+    public static function willGenerate(lib: String): Bool {
         var parts = lib.split("/");
-        if (didGen.exists(lib) || parts.contains("internal")) {
-            mutex.release();
-            return;
-        }
-        if (initLib == "std" && parts.contains("golang.org")) {
-            mutex.release();
-            return;
+        if (parts.contains("internal")) {
+            return false;
         }
 
-        didGen.set(lib, true);
+        if ((initLibs.length == 1 && initLibs[0] == "std") && parts.contains("golang.org")) {
+            return false;
+        }
+        return true;
+    }
+
+    static function genLibs(libs: Array<String>, output: String): Void {
+        mutex.acquire();
+        var toGen = [];
+        for (lib in libs) {
+            if (didGen.exists(lib) || !willGenerate(lib)) {
+                continue;
+            }
+            didGen.set(lib, true);
+            toGen.push(lib);
+        }
         mutex.release();
-
-        Sys.println('generating "$lib"');
-
-        var loadDir = "";
-        if (lib.split("/")[0].contains(".")) {
-            ensureDependency(lib);
-            loadDir = ensureScratchModule();
+        if (toGen.length == 0) {
+            return;
+        }
+        libs = toGen;
+        
+        for (lib in libs) {
+            Sys.println('generating "$lib"');
         }
 
+        for (lib in libs) {
+            if (lib.split("/")[0].contains(".")) {
+                ensureDependency(lib);
+            }
+        }
+
+        var loadDir = ensureScratchModule();
         var config: Config = {
             mode: LoadMode.needName.or(LoadMode.needTypes).or(LoadMode.needTypesInfo).or(LoadMode.needSyntax).or(LoadMode.needImports),
             dir: loadDir
         };
+        var configPtr: Pointer<Config> = config;
 
-        var entries = Packages.load(config, lib).sure();
+        var entries = Packages.load(configPtr, ...libs).sure();
+
+        for (entry in entries) {
+            genPackage(entry, output);
+        }
+    }
+
+    static function genPackage(entry: Pointer<Package>, output: String): Void {
+        var lib = entry.value.pkgPath;
+
+        // skip regenerating an already existing package
+        var checkSumPath = Path.join([getPackageDir(output, topLevelName, lib), ".go2hx_cache"]);
+        var prevCheckSum = FileSystem.exists(checkSumPath) ? File.getContent(checkSumPath) : "";
+        var checkSum = Cache.getPackageCheckSum(entry);
+        if (prevCheckSum == checkSum) {
+            return;
+        } else {
+            Os.mkdirAll(Path.directory(checkSumPath), Syntax.code("0775")).sure();
+            File.saveContent(checkSumPath, checkSum);
+        }
+
         var outputs: Map<String, GenOutput> = new Map();
 
         function getOutput(name: String): GenOutput {
@@ -149,71 +191,72 @@ class Main {
             return outputs[name];
         }
 
-        for (entry in entries) {
-            var scope = entry.value.types.value.scope().value;
-            for (dep in entry.value.imports.keys()) {
-                Syntax.go(() -> genLib(dep, output));
+        // go through imports
+        var scope = entry.value.types.value.scope().value;
+        for (dep in entry.value.imports.keys()) {
+            Syntax.go(() -> genLibs([dep], output));
+        }
+
+        for (name in scope.names()) {
+            var obj = scope.lookup(name);
+
+            Syntax.code("switch {0}.(type) {", obj); // this is so bad :[
+            Syntax.code("case *types.TypeName:");
+                GenTypeName.gen(obj, getOutput);
+            Syntax.code("case *types.Func:"); {
+                if (!obj.exported()) {
+                    continue;
+                }
+                var func = TypeHelper.typeAs(obj, Func);
+                var sig = func.signature().value;
+                var recv = sig.recv();
+                var buf = getOutput(entry.value.name).staticFunctions;
+
+                // var typeParams = sig.typeParams().value;
+                var params = sig.params()?.value ?? null;
+                var results = sig.results()?.value ?? null;
+                var varadic = sig.variadic();
+
+                buf.add('    ' + genFunc(name, sig, recv == null) + '\n');
             }
 
-            for (name in scope.names()) {
-                var obj = scope.lookup(name);
-//                if (!obj.exported()) {
-//                    continue;
-//                }
-
-                Syntax.code("switch {0}.(type) {", obj); // this is so bad :[
-                Syntax.code("case *types.TypeName:");
-                    GenTypeName.gen(obj, getOutput);
-                Syntax.code("case *types.Func:"); {
-                    var func = TypeHelper.typeAs(obj, Func);
-                    var sig = func.signature().value;
-                    var recv = sig.recv();
-                    var buf = getOutput(entry.value.name).staticFunctions;
-
-                    // var typeParams = sig.typeParams().value;
-                    var params = sig.params()?.value ?? null;
-                    var results = sig.results()?.value ?? null;
-                    var varadic = sig.variadic();
-
-                    buf.add('    ' + genFunc(name, sig, recv == null) + '\n');
+            Syntax.code("case *types.Var:"); {
+                if (!obj.exported()) {
+                    continue;
+                }
+                var v = TypeHelper.typeAs(obj, Var);
+                if (!TypeHelper.isExportedType(v.type())) {
+                    continue;
                 }
 
-                Syntax.code("case *types.Var:"); {
-                    var v = TypeHelper.typeAs(obj, Var);
-                    if (!TypeHelper.isExportedType(v.type())) {
-                        continue;
-                    }
+                var buf = getOutput(entry.value.name).staticVars;
+                var name = v.name();
+                var type = v.type();
 
-                    var buf = getOutput(entry.value.name).staticVars;
-                    var name = v.name();
-                    var type = v.type();
-
-                    buf.add('    @:native("${name}") static var ${Sanitize.name(toHaxeCaseWithUnderscore(name))}: ${genType(type)};\n');
-                }
-
-                Syntax.code("case *types.Const:"); {
-                    var c = TypeHelper.typeAs(obj, go.go.types.Const);
-
-                    if (!c.exported()) {
-                        continue;
-                    }
-
-                    var buf = getOutput(entry.value.name).consts;
-
-                    var name = c.name();
-                    var type = c.type();
-
-                    buf.add('    @:native("${name}") static var ${Sanitize.name(name)}: ${genType(type)};\n');
-                }
-
-                Syntax.code("default:"); {
-                    // trace(go.reflect.Reflect.typeOf(obj).string());
-                }
-
-                Syntax.code("}");
-                // trace(obj.name(), obj.type().string());
+                buf.add('    @:native("${name}") static var ${Sanitize.name(toHaxeCaseWithUnderscore(name))}: ${genType(type)};\n');
             }
 
+            Syntax.code("case *types.Const:"); {
+                var c = TypeHelper.typeAs(obj, go.go.types.Const);
+
+                if (!c.exported()) {
+                    continue;
+                }
+
+                var buf = getOutput(entry.value.name).consts;
+
+                var name = c.name();
+                var type = c.type();
+
+                buf.add('    @:native("${name}") static var ${Sanitize.name(name)}: ${genType(type)};\n');
+            }
+
+            Syntax.code("default:"); {
+                // trace(Reflect.typeOf(obj).string());
+            }
+
+            Syntax.code("}");
+            // trace(obj.name(), obj.type().string());
         }
 
         for (file in outputs.keys()) {
@@ -229,13 +272,25 @@ class Main {
                 isPkg = true;
             }
 
+            // if os.File and os.file add "_" suffix to unexported type variant
+            var className = toPascalCase(file);
+            if (!isPkg && className != file) {
+                if (outputs.exists(className)) {
+                    className += "_";
+                }
+                // unexported empty, skip
+                if (out.staticFunctions.length == 0 && out.staticVars.toString() == "") {
+                    continue;
+                }
+            }
+
             buf.add('package ${topLevelName}${relLib.length > 0 ? "." + Sanitize.packagePath(relLib) : ""};\n');
             buf.add('\n');
             if (out.isStruct == true) {
                 buf.add('@:structInit\n'); // TODO: generate constructor where everything is optional
             }
             buf.add('@:go.Type({ name: "${file}", instanceName: "${lib.split("/").pop()}.${file}", imports: ["${lib}"] })\n');
-            buf.add('extern ${out.isInterface || out.typedefStr != null ? "typedef" : "class"} ${toPascalCase(file)}${out.paramStr}${out.isInterface || out.typedefStr != null ? " = " : " "}');
+            buf.add('extern ${out.isInterface || out.typedefStr != null ? "typedef" : "class"} ${className}${out.paramStr}${out.isInterface || out.typedefStr != null ? " = " : " "}');
 
             if (out.typedefStr != null) {
                 buf.add(out.typedefStr);
@@ -256,17 +311,15 @@ class Main {
                 buf.add("}");
             }
 
-            Os.mkdirAll('${output}/${topLevelName}/${Sanitize.packageDir(relLib)}', Syntax.code("0775"));
-            Os.writeFile('${output}/${topLevelName}/${Sanitize.packageDir(relLib)}/${toPascalCase(file)}.hx', cast buf.toString(), Syntax.code("0666"));
+            var dir = '${output}/${topLevelName}/${Sanitize.packageDir(relLib)}';
+
+            Os.mkdirAll(dir, Syntax.code("0775")).sure();
+            Os.writeFile('$dir/${className}.hx', cast buf.toString(), Syntax.code("0666")).sure();
         }
     }
 
-    static function genPackage(pkg) {
-        return '';
-    }
-
-    static function genFile(file) {
-        return '';
+    static function getPackageDir(output:String, topLevelName:String, relLib:String) {
+        return '${output}/${topLevelName}/${Sanitize.packageDir(relLib)}';
     }
 
     public static function genFunc(name: String, sig: Signature, topLevel:Bool, closure: Bool = false) {
@@ -312,7 +365,7 @@ class Main {
             tParamsStr = '<' + tParamsLocal.join(", ") + '>';
         }
         
-        return '${meta}${topLevel && !closure ? "static " : ""}${closure ? "" : 'function ${Sanitize.name(toHaxeCaseWithUnderscore(name))}'}${tParamsStr}(${params.join(", ")})${closure ? ' -> ' : ': '}${results.len() == 0 ? "Void" :genResults(results)}${closure ? "" : ";"}';
+        return '${meta}${topLevel && !closure ? "static " : ""}${closure ? "" : 'function ${Sanitize.name(toHaxeCaseWithUnderscore(name))}'}${tParamsStr}(${params.join(", ")})${closure ? ' -> ' : ': '}${results.len() == 0 ? "Void" :('(' + genResults(results) + ')')}${closure ? "" : ";"}';
     }
 
     static function isResultType(args:go.go.types.Tuple) {
@@ -327,7 +380,7 @@ class Main {
 
             return 'go.Tuple<{ ' + genTuple(args, false, false).join(", ") + ' }>';
         }else{
-            return '(' + genTuple(args, false, true).join(", ") + ')';
+            return genTuple(args, false, true).join(", ");
         }
     }
 
@@ -369,6 +422,16 @@ class Main {
     public static function genType(t: go.go.types.Type): String {
         var s = t.string();
         var tParamStr = '';
+
+        if (TypeHelper.isNamedType(t)) {
+            var namedObj = TypeHelper.typeAs(t, Named).obj();
+            if (namedObj != null) {
+                var pkg = namedObj.value.pkg();
+                if (pkg != null && !willGenerate(pkg.value.path())) {
+                    return "Dynamic";
+                }
+            }
+        }
 
         if (TypeHelper.isNamedType(t) && TypeHelper.typeAs(t, Named).typeArgs() != null) {
             var typeParams = TypeHelper.typeAs(t, Named).typeArgs().value;
@@ -461,6 +524,7 @@ class Main {
                 'go.GoArray<${genType(arr.elem())}, ${arr.len()}>';
             }
 
+            case _ if (TypeHelper.isTypeParamType(t)): toPascalCase(s);
             case _ if (s.contains(".")): resolvePath(s);
             case _: s;
         }
@@ -476,5 +540,3 @@ class Main {
 interface ElemType {
     public function elem():go.go.types.Type;
 }
-
-// walk packages -> files -> types + recv funcs and funcs
