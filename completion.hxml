@@ -1,0 +1,5 @@
+-cp source
+-m Main
+-L hx2go
+-D no-compilation
+--custom-target go=output
