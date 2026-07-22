@@ -36,6 +36,7 @@ class Main {
     static var mutex = new sys.thread.Mutex();
     public static var topLevelName: String = "go";
     public static var scratchDir: String = null;
+    
 
     static function ensureScratchModule(): String {
         if (scratchDir != null) return scratchDir;
@@ -86,12 +87,21 @@ class Main {
     }
 
     static var initLibs = [];
+    static var stdGenBool = false;
 
     public static function main() {
         var args = Sys.args();
         if (args.length < 2) {
             Sys.println("Usage: go2hx <lib>... <output>");
             Sys.exit(1);
+        }
+        for (arg in args) {
+            switch arg {
+                case "-stdgen", "--stdgen":
+                    stdGenBool = true;
+                    Sys.println("stdgen enabled");
+                    args.remove(arg);
+            }
         }
         // last arg is the output directory
         Sys.setCwd(args.pop());
@@ -106,7 +116,7 @@ class Main {
             return false;
         }
 
-        if ((initLibs.length == 1 && initLibs[0] == "std") && parts.contains("golang.org")) {
+        if (stdGenBool && (!parts.contains("term") && !parts.contains("tools") && parts.contains("golang.org"))) {
             return false;
         }
         return true;
@@ -279,9 +289,9 @@ class Main {
                     className += "_";
                 }
                 // unexported empty, skip
-                if (out.staticFunctions.length == 0 && out.staticVars.toString() == "") {
-                    continue;
-                }
+                // if (out.instanceFunctions.toString() == "" && out.instanceVars.toString() == "") {
+                //     continue;
+                // }
             }
 
             buf.add('package ${topLevelName}${relLib.length > 0 ? "." + Sanitize.packagePath(relLib) : ""};\n');
