@@ -107,7 +107,7 @@ class Main {
         Sys.setCwd(args.pop());
         var output = args.pop();
         initLibs = args;
-        genLibs(initLibs.copy(), output);
+        genLibs(initLibs.copy(), output, false);
     }
 
     public static function willGenerate(lib: String): Bool {
@@ -122,7 +122,7 @@ class Main {
         return true;
     }
 
-    static function genLibs(libs: Array<String>, output: String): Void {
+    static function genLibs(libs: Array<String>, output: String, layer2:Bool=true): Void {
         mutex.acquire();
         var toGen = [];
         for (lib in libs) {
@@ -137,10 +137,6 @@ class Main {
             return;
         }
         libs = toGen;
-        
-        for (lib in libs) {
-            Sys.println('generating "$lib"');
-        }
 
         for (lib in libs) {
             if (lib.split("/")[0].contains(".")) {
@@ -162,7 +158,7 @@ class Main {
         }
     }
 
-    static function genPackage(entry: Pointer<Package>, output: String): Void {
+    static function genPackage(entry: Pointer<Package>, output: String, layer2:Bool=false): Void {
         var lib = entry.value.pkgPath;
 
         // skip regenerating an already existing package
@@ -175,6 +171,7 @@ class Main {
             Os.mkdirAll(Path.directory(checkSumPath), Syntax.code("0775")).sure();
             File.saveContent(checkSumPath, checkSum);
         }
+        Sys.println('generating "$lib"');
 
         var outputs: Map<String, GenOutput> = new Map();
 
@@ -203,8 +200,10 @@ class Main {
 
         // go through imports
         var scope = entry.value.types.value.scope().value;
-        for (dep in entry.value.imports.keys()) {
-            Syntax.go(() -> genLibs([dep], output));
+        if (!layer2) {
+            for (dep in entry.value.imports.keys()) {
+                genLibs([dep], output);
+            }
         }
 
         for (name in scope.names()) {
