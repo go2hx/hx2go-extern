@@ -41,12 +41,12 @@ class Main {
     static function ensureScratchModule(): String {
         if (scratchDir != null) return scratchDir;
 
-        var dir = Os.tempDir() + "/go2hx-scratch";
+        var dir = Os.tempDir() + "/hx2go-extern-scratch";
         Os.mkdirAll(dir, Syntax.code("0775"));
 
         var res = Os.stat(dir + "/go.mod");
         if (res.tuple().error != null) {
-            var cmd = Exec.command("go", "mod", "init", "go2hxscratch");
+            var cmd = Exec.command("go", "mod", "init", "scratch");
             cmd.dir = dir;
             cmd.run();
         }
@@ -92,7 +92,7 @@ class Main {
     public static function main() {
         var args = Sys.args();
         if (args.length < 2) {
-            Sys.println("Usage: go2hx <lib>... <output>");
+            Sys.println("Usage: hx2go-extern <lib>... <output>");
             Sys.exit(1);
         }
         for (arg in args) {
@@ -162,7 +162,7 @@ class Main {
         var lib = entry.value.pkgPath;
 
         // skip regenerating an already existing package
-        var checkSumPath = Path.join([getPackageDir(output, topLevelName, lib), ".go2hx_cache"]);
+        var checkSumPath = Path.join([getPackageDir(output, topLevelName, lib), ".hx2go_cache"]);
         var prevCheckSum = FileSystem.exists(checkSumPath) ? File.getContent(checkSumPath) : "";
         var checkSum = Cache.getPackageCheckSum(entry);
         if (prevCheckSum == checkSum) {
