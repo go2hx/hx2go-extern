@@ -4,11 +4,11 @@ import sys.FileSystem;
 function main() {
     var cwd = Sys.getCwd();
     var filePath = Path.join([ cwd, 'output', 'main' ]);
-    var bin = Path.join([ cwd, 'output', 'main', executable('main')]);
+    var bin = Path.join([ filePath, executable('main')]);
 
     var args = Sys.args();
 
-    if (!FileSystem.exists(cwd) || (args.length > 0 && args[0] == "rebuild")) {
+    if (!FileSystem.exists(bin) || (args.length > 0 && args[0] == "rebuild")) {
         Sys.println('hx2go-extern has not been built yet, doing so now');
         Sys.command("haxe Compile.hxml");
     }
