@@ -292,8 +292,8 @@ class Main {
                 //     continue;
                 // }
             }
-
-            buf.add('package ${topLevelName}${relLib.length > 0 ? "." + Sanitize.packagePath(relLib) : ""};\n');
+            var pkgName = topLevelName + (relLib.length > 0 ? "." + Sanitize.packagePath(relLib) : "");
+            buf.add('package $pkgName;\n');
             buf.add('\n');
             if (out.isStruct == true) {
                 buf.add('@:structInit\n'); // TODO: generate constructor where everything is optional
@@ -302,7 +302,16 @@ class Main {
             buf.add('extern ${out.isInterface || out.typedefStr != null ? "typedef" : "class"} ${className}${out.paramStr}${out.isInterface || out.typedefStr != null ? " = " : " "}');
 
             if (out.typedefStr != null) {
-                buf.add(out.typedefStr);
+                if (out.instanceFunctions.toString() != "") {
+                    var methodsTypeName = className + "Methods" + out.paramStr;
+
+                    buf.add('haxe.extern.EitherType<${out.typedefStr}, {\n');
+                    buf.add(out.instanceFunctions.toString());
+                    if (out.staticFunctions.length > 0 || out.instanceFunctions.length > 0) buf.add("\n");
+                    buf.add("}>");
+                }else{
+                    buf.add(out.typedefStr);
+                }
             } else {
                 buf.add('{\n\n');
                 buf.add(out.consts.toString());

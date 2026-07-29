@@ -30,9 +30,10 @@ class GenTypeName {
                 var sig = method.signature().value;
                 out.instanceFunctions.add('    ${Main.genFunc(method.name(), sig, false, false)}\n');
             }
-        } else if (type.isAlias() && (TypeHelper.isNamedType(resolvedTo) || TypeHelper.isBasicType(resolvedTo))) { // TODO: support for func() aswell (see iter.Seq)
-            out.typedefStr = Main.genType(resolvedTo);
         } else {
+            if (type.isAlias() && (TypeHelper.isNamedType(resolvedTo) || TypeHelper.isBasicType(resolvedTo))) { // TODO: support for func() aswell (see iter.Seq)
+                out.typedefStr = Main.genType(resolvedTo);
+            }
             var isNamed = TypeHelper.isNamedType(type.type());
             var out = getOutput(obj.name());
 
