@@ -3,7 +3,7 @@ import go.Pointer;
 using StringTools;
 import go.go.types.Pointer as PointerType;
 import go.go.types.Chan as ChanType;
-import std.go.types.Types.Named;
+import go.go.types.Named;
 import go.go.types.Slice as SliceType;
 
 

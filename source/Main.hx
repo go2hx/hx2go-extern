@@ -18,7 +18,8 @@ import go.go.types.Alias;
 import go.go.types.Struct;
 import go.go.types.Chan as ChanType;
 
-import std.go.packages.Packages;
+import go.golang_org.x.tools.go.Packages;
+import go.golang_org.x.tools.go.packages.*;
 import go.Pointer;
 import go.Os;
 import go.os.exec.Cmd;
@@ -41,7 +42,7 @@ class Main {
     static function ensureScratchModule(): String {
         if (scratchDir != null) return scratchDir;
 
-        var dir = Os.tempDir() + "/hx2go-extern-scratch";
+        var dir = "./hx2go-extern-scratch";
         Os.mkdirAll(dir, Syntax.code("0775"));
 
         var res = Os.stat(dir + "/go.mod");
@@ -57,6 +58,7 @@ class Main {
 
     static function ensureDependency(lib: String): Void {
         var dir = ensureScratchModule();
+        trace("go2hx-extern go get " + lib);
         var cmd = Exec.command("go", "get", lib);
         cmd.dir = dir;
 
@@ -146,8 +148,19 @@ class Main {
 
         var loadDir = ensureScratchModule();
         var config: Config = {
-            mode: LoadMode.needName.or(LoadMode.needTypes).or(LoadMode.needTypesInfo).or(LoadMode.needSyntax).or(LoadMode.needImports),
-            dir: loadDir
+            // TODO use Haxe version when we support extern constants
+            mode: Syntax.code("packages.NeedName | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedSyntax | packages.NeedImports"),
+            // mode: LoadMode.needName.or(LoadMode.needTypes).or(LoadMode.needTypesInfo).or(LoadMode.needSyntax).or(LoadMode.needImports),
+            dir: loadDir,
+            // TODO remove when extern structInit default values is working
+            tests: false,
+            parseFile: null,
+            overlay: null,
+            logf: null,
+            fset: null,
+            env: null,
+            context: null,
+            buildFlags: null,
         };
         var configPtr: Pointer<Config> = config;
 

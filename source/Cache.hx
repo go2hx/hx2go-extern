@@ -1,7 +1,7 @@
 import haxe.crypto.Sha256;
 import sys.io.File;
 import go.Pointer;
-import std.go.packages.Packages;
+import go.golang_org.x.tools.go.packages.Package;
 
 class Cache {
     public static function getPackageCheckSum(entry:Pointer<Package>):String {
