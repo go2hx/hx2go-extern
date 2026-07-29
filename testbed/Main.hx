@@ -1,28 +1,29 @@
-import go2hx.net.http.ResponseWriter;
-import go2hx.net.http.Request;
-import go2hx.net.Http;
-import go2hx.encoding.Json;
-import go2hx.Bytes;
+import go.net.http.Server;
+import go.net.http.ResponseWriter;
+import go.net.http.Request;
+import go.net.Http;
+import go.encoding.Json;
+import go.Bytes;
 import go.Pointer;
 import go.Map;
-import go.os.Os;
-import go2hx.Image;
-import go2hx.bytes.Buffer;
-import go2hx.image.Png;
-import go2hx.image.color.RGBA;
+import go.Os;
+import go.Image;
+import go.bytes.Buffer;
+import go.image.Png;
+import go.image.color.RGBA;
 import go.Syntax;
-import go2hx.Net;
-import go2hx.net.Conn;
+import go.Net;
+import go.net.Conn;
 import go.Slice;
 import go.Byte;
 import go.Go;
-import go2hx.os.exec.Cmd;
-import go2hx.os.Exec;
-import go2hx.Bufio;
-import go2hx.bufio.Scanner;
-import go2hx.Strings;
-import go2hx.encoding.Hex;
-import go2hx.crypto.Sha256;
+import go.os.exec.Cmd;
+import go.os.Exec;
+import go.Bufio;
+import go.bufio.Scanner;
+import go.Strings;
+import go.encoding.Hex;
+import go.crypto.Sha256;
 
 function handler(w: ResponseWriter, req: Pointer<Request>): Void {
     var buf = new StringBuf();
@@ -40,9 +41,16 @@ function handler(w: ResponseWriter, req: Pointer<Request>): Void {
 }
 
 function httpTest() {
+    // TODO use Haxe version when @:structInit has default values for externs
+    var server:Pointer<Server> = Syntax.code('&http.Server{Addr: ":8080"}');
+    Syntax.go(() -> {
+        Sys.sleep(1);
+        server.close();
+    });
+
     Http.handleFunc("/", handler);
-    trace("http server is listening, please navigate to :8080");
-    Http.listenAndServe(":8080", null);
+    trace("http server is listening, please navigate to http://localhost:8080");
+    trace(server.listenAndServe());
 }
 
 function jsonTest() {

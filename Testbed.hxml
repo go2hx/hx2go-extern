@@ -2,5 +2,11 @@
 -cp output
 -main Main
 -L hx2go
+-D go-lib=net/http
+-D go-lib=encoding/json
+-D go-lib=crypto/sha256
+-D go-lib=image
+-D go-lib=image/png
+-D go-lib=os
 --custom-target go=output/testbed
 --cmd go -C ./output/testbed/main run .
