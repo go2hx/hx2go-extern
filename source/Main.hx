@@ -58,7 +58,6 @@ class Main {
 
     static function ensureDependency(lib: String): Void {
         var dir = ensureScratchModule();
-        trace("go2hx-extern go get " + lib);
         var cmd = Exec.command("go", "get", lib);
         cmd.dir = dir;
 
