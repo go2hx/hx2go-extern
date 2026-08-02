@@ -18,8 +18,7 @@ import go.go.types.Alias;
 import go.go.types.Struct;
 import go.go.types.Chan as ChanType;
 
-import go.golang_org.x.tools.go.Packages;
-import go.golang_org.x.tools.go.packages.*;
+import std.go.packages.Packages;
 import go.Pointer;
 import go.Os;
 import go.os.exec.Cmd;
@@ -33,8 +32,6 @@ using StringTools;
 
 class Main {
 
-    public static var didGen: Map<String, Bool> = new Map();
-    static var mutex = new sys.thread.Mutex();
     public static var topLevelName: String = "go";
     public static var scratchDir: String = null;
     
@@ -42,7 +39,7 @@ class Main {
     static function ensureScratchModule(): String {
         if (scratchDir != null) return scratchDir;
 
-        var dir = "./hx2go-extern-scratch";
+        var dir = Os.tempDir() + "/hx2go-extern-scratch";
         Os.mkdirAll(dir, Syntax.code("0775"));
 
         var res = Os.stat(dir + "/go.mod");
@@ -108,7 +105,7 @@ class Main {
         Sys.setCwd(args.pop());
         var output = args.pop();
         initLibs = args;
-        genLibs(initLibs.copy(), output, false);
+        genLibs(initLibs.copy(), output);
     }
 
     public static function willGenerate(lib: String): Bool {
@@ -123,22 +120,31 @@ class Main {
         return true;
     }
 
-    static function genLibs(libs: Array<String>, output: String, layer2:Bool=true): Void {
-        mutex.acquire();
-        var toGen = [];
-        for (lib in libs) {
-            if (didGen.exists(lib) || !willGenerate(lib)) {
-                continue;
-            }
-            didGen.set(lib, true);
-            toGen.push(lib);
-        }
-        mutex.release();
-        if (toGen.length == 0) {
+    
+    // handle net/http.CookieJar and net/http/cookiejar
+    static var scopeNames: Map<String, Map<String, Bool>> = new Map();
+
+    static function parentPath(lib: String): String {
+        var idx = lib.lastIndexOf("/");
+        return idx == -1 ? "" : lib.substr(0, idx);
+    }
+
+    static function recordScopeNames(entry: Pointer<Package>): Void {
+        var lib = entry.value.pkgPath;
+        if (scopeNames.exists(lib) || entry.value.types == null) {
             return;
         }
-        libs = toGen;
 
+        var names: Map<String, Bool> = new Map();
+        var scope = entry.value.types.value.scope().value;
+        for (name in scope.names()) {
+            names[toPascalCase(name).toLowerCase()] = true;
+        }
+
+        scopeNames[lib] = names;
+    }
+
+    static function genLibs(libs: Array<String>, output: String): Void {
         for (lib in libs) {
             if (lib.split("/")[0].contains(".")) {
                 ensureDependency(lib);
@@ -147,30 +153,47 @@ class Main {
 
         var loadDir = ensureScratchModule();
         var config: Config = {
-            // TODO use Haxe version when we support extern constants
-            mode: Syntax.code("packages.NeedName | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedSyntax | packages.NeedImports"),
-            // mode: LoadMode.needName.or(LoadMode.needTypes).or(LoadMode.needTypesInfo).or(LoadMode.needSyntax).or(LoadMode.needImports),
-            dir: loadDir,
-            // TODO remove when extern structInit default values is working
-            tests: false,
-            parseFile: null,
-            overlay: null,
-            logf: null,
-            fset: null,
-            env: null,
-            context: null,
-            buildFlags: null,
+            mode: LoadMode.needName.or(LoadMode.needTypes).or(LoadMode.needTypesInfo).or(LoadMode.needSyntax).or(LoadMode.needFiles).or(LoadMode.needImports).or(LoadMode.needDeps),
+            dir: loadDir
         };
         var configPtr: Pointer<Config> = config;
 
         var entries = Packages.load(configPtr, ...libs).sure();
 
+        var all: Map<String, Pointer<Package>> = new Map();
         for (entry in entries) {
-            genPackage(entry, output);
+            collectPkgs(entry, all);
+        }
+
+        for (lib in all.keys()) {
+            recordScopeNames(all[lib]);
+        }
+
+        for (lib in all.keys()) {
+            if (willGenerate(lib)) {
+                genPackage(all[lib], output);
+            }
         }
     }
 
-    static function genPackage(entry: Pointer<Package>, output: String, layer2:Bool=false): Void {
+    static function collectPkgs(entry: Pointer<Package>, all: Map<String, Pointer<Package>>): Void {
+        var lib = entry.value.pkgPath;
+        if (all.exists(lib) || entry.value.types == null) {
+            return;
+        }
+
+        all[lib] = entry;
+
+        if (entry.value.imports == null) {
+            return;
+        }
+
+        for (dep in entry.value.imports.keys()) {
+            collectPkgs(entry.value.imports[dep], all);
+        }
+    }
+
+    static function genPackage(entry: Pointer<Package>, output: String): Void {
         var lib = entry.value.pkgPath;
 
         // skip regenerating an already existing package
@@ -210,13 +233,7 @@ class Main {
             return outputs[name];
         }
 
-        // go through imports
         var scope = entry.value.types.value.scope().value;
-        if (!layer2) {
-            for (dep in entry.value.imports.keys()) {
-                genLibs([dep], output);
-            }
-        }
 
         for (name in scope.names()) {
             var obj = scope.lookup(name);
@@ -295,8 +312,12 @@ class Main {
 
             // if os.File and os.file add "_" suffix to unexported type variant
             var className = toPascalCase(file);
-            if (!isPkg && className != file) {
+            if (className != file) {
                 if (outputs.exists(className)) {
+                    className += "_";
+                }
+                // the parent's types own the directory this package class lands in
+                if (isPkg && scopeNames.exists(relLib) && scopeNames[relLib].exists(className.toLowerCase())) {
                     className += "_";
                 }
                 // unexported empty, skip
