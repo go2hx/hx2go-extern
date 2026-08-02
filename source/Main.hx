@@ -18,7 +18,10 @@ import go.go.types.Alias;
 import go.go.types.Struct;
 import go.go.types.Chan as ChanType;
 
-import std.go.packages.Packages;
+import go.golang_org.x.tools.go.Packages;
+import go.golang_org.x.tools.go.packages.Package;
+import go.golang_org.x.tools.go.packages.Config;
+import go.golang_org.x.tools.go.packages.LoadMode;
 import go.Pointer;
 import go.Os;
 import go.os.exec.Cmd;
@@ -153,8 +156,16 @@ class Main {
 
         var loadDir = ensureScratchModule();
         var config: Config = {
-            mode: LoadMode.needName.or(LoadMode.needTypes).or(LoadMode.needTypesInfo).or(LoadMode.needSyntax).or(LoadMode.needFiles).or(LoadMode.needImports).or(LoadMode.needDeps),
-            dir: loadDir
+            mode: Syntax.code('packages.NeedName | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedSyntax | packages.NeedFiles | packages.NeedDeps'),
+            dir: loadDir,
+            tests: false,
+            parseFile: null,
+            overlay: null,
+            logf: null,
+            fset: null,
+            env: null,
+            context: null,
+            buildFlags: null,
         };
         var configPtr: Pointer<Config> = config;
 
