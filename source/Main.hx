@@ -125,7 +125,7 @@ class Main {
 
     
     // handle net/http.CookieJar and net/http/cookiejar
-    static var scopeNames: Map<String, Map<String, Bool>> = new Map();
+    static var scopeNames: Map<String, Array<String>> = new Map();
 
     static function parentPath(lib: String): String {
         var idx = lib.lastIndexOf("/");
@@ -138,13 +138,47 @@ class Main {
             return;
         }
 
-        var names: Map<String, Bool> = new Map();
+        var names: Array<String> = [];
         var scope = entry.value.types.value.scope().value;
         for (name in scope.names()) {
-            names[toPascalCase(name).toLowerCase()] = true;
+            names.push(name);
         }
 
         scopeNames[lib] = names;
+    }
+
+    static function libGeneratesTypeName(lib: String, className: String): Bool {
+        var names = scopeNames[lib];
+        if (names == null) {
+            return false;
+        }
+        var key = className.toLowerCase();
+        for (name in names) {
+            if (haxeTypeName(lib, name).toLowerCase() == key) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // http.http2ClientConnPool vs http.http2clientConnPool)
+    // handle case insensitive file systems
+    public static function haxeTypeName(lib: String, name: String): String {
+        var className = toPascalCase(name);
+        var names = scopeNames[lib];
+        if (names == null) {
+            return className;
+        }
+        var key = className.toLowerCase();
+        for (other in names) {
+            if (other == name) {
+                break;
+            }
+            if (toPascalCase(other).toLowerCase() == key) {
+                className += "_";
+            }
+        }
+        return className;
     }
 
     static function genLibs(libs: Array<String>, output: String): Void {
@@ -322,13 +356,10 @@ class Main {
             }
 
             // if os.File and os.file add "_" suffix to unexported type variant
-            var className = toPascalCase(file);
+            var className = isPkg ? toPascalCase(file) : haxeTypeName(lib, file);
             if (className != file) {
-                if (outputs.exists(className)) {
-                    className += "_";
-                }
                 // the parent's types own the directory this package class lands in
-                if (isPkg && scopeNames.exists(relLib) && scopeNames[relLib].exists(className.toLowerCase())) {
+                if (isPkg && libGeneratesTypeName(relLib, className)) {
                     className += "_";
                 }
                 // unexported empty, skip
@@ -478,7 +509,7 @@ class Main {
         var typeName = rest.substr(dotIdx + 1);
         var fullPkgPath = pkgPath.length > 0 ? '${pkgPath}/${pkgBase}' : pkgBase;
 
-        return '${topLevelName}.${Sanitize.packagePath(fullPkgPath)}.${toPascalCase(typeName)}';
+        return '${topLevelName}.${Sanitize.packagePath(fullPkgPath)}.${haxeTypeName(fullPkgPath, typeName)}';
     }
 
     public static function genType(t: go.go.types.Type): String {
