@@ -126,6 +126,9 @@ class GenTypeName {
     }
 
     static function getTypeDefaultValue(t:go.go.types.Type):String {
+        var isNamed = false;
+        Syntax.code("if _, ok := {0}.(*types.Named); ok { {1} = true }", t, isNamed);
+
         t.underlying();
         var s = "";
         Syntax.code("switch u := {0}.(type) {", t.underlying());
@@ -136,14 +139,14 @@ class GenTypeName {
             Syntax.code("case types.UnsafePointer:");
                 s = "null";
             Syntax.code("case types.Bool:");
-                s = "false";
+                s = isNamed ? "cast false" : "false";
             Syntax.code("case types.String:");
-                s = '""';
+                s = isNamed ? 'cast ""' : '""';
             Syntax.code("case types.Float32, types.Float64:");
-                s = '0.0';
+                s = isNamed ? 'cast 0.0' : '0.0';
             Syntax.code("default:");
                 Syntax.code("_ = u");
-                s = "0";
+                s = isNamed ? "cast 0" : "0";
             Syntax.code("}");
         Syntax.code("case *types.TypeParam:");
         Syntax.code("}");
