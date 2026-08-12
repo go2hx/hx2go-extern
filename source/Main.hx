@@ -371,6 +371,17 @@ class Main {
                 // }
             }
             var pkgName = topLevelName + (relLib.length > 0 ? "." + Sanitize.packagePath(relLib) : "");
+
+            // recursive typedef, avoid collision
+            if (out.typedefStr == className) {
+                out.typedefStr = switch className {
+                    case "String": "std.String";
+                    case "Bool": "StdTypes.Bool";
+                    case "Float": "StdTypes.Float";
+                    case _: out.typedefStr;
+                }
+            }
+
             buf.add('package $pkgName;\n');
             buf.add('\n');
             if (out.isStruct == true) {
