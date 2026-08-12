@@ -40,9 +40,18 @@ class GenTypeName {
             if (isNamed) {
                 var named = TypeHelper.typeAs(type.type(), Named);
 
+                var methodSet = go.go.Types.newMethodSet(Syntax.code("types.NewPointer({0})", type.type()));
+                var seen = new Map<String, Bool>();
+                for (i in 0...methodSet.len()) {
+                    var method = TypeHelper.typeAs(methodSet.at(i).obj(), Func);
+                    if (method.exported()) {
+                        seen.set(Sanitize.name(Main.toHaxeCase(method.name())), true);
+                    }
+                }
+
                 if (TypeHelper.isStructType(underlying)) {
                     out.isStruct = true;
-                    addStructFields(underlying, out);
+                    addStructFields(underlying, out, seen);
                 }
 
                 var tp = named.typeParams();
@@ -60,7 +69,6 @@ class GenTypeName {
                     out.paramStr = params.length == 0 ? "" : "<" + params.join(", ") + ">";
                 }
 
-                var methodSet = go.go.Types.newMethodSet(Syntax.code("types.NewPointer({0})", type.type()));
                 for (i in 0...methodSet.len()) {
                     var sel = methodSet.at(i);
                     var method = TypeHelper.typeAs(sel.obj(), Func);
@@ -76,8 +84,8 @@ class GenTypeName {
         }
     }
 
-    static function addStructFields(t: go.go.types.Type, out: GenOutput) {
-        addStructFieldsRec(t, out, 0, new Map<String, Bool>());
+    static function addStructFields(t: go.go.types.Type, out: GenOutput, seen: Map<String, Bool>) {
+        addStructFieldsRec(t, out, 0, seen);
     }
 
     static function addStructFieldsRec(t: go.go.types.Type, out: GenOutput, depth: Int, seen: Map<String, Bool>) {
@@ -91,12 +99,13 @@ class GenTypeName {
         for (i in 0...struct.numFields()) {
             var field = TypeHelper.typeAs(struct.field(i), Var);
             var fname = field.name();
-            if (!field.exported() || seen.exists(fname)) {
+            var hname = Sanitize.name(Main.toHaxeCase(fname));
+            if (!field.exported() || seen.exists(hname)) {
                 continue;
             }
-            seen.set(fname, true);
+            seen.set(hname, true);
 
-            var p = '${Sanitize.name(Main.toHaxeCase(fname))}: ${Main.genType(field.type())}';
+            var p = '${hname}: ${Main.genType(field.type())}';
             out.instanceVars.add('    @:native("${fname}") var ${p};\n');
             if (depth == 0) {
                 out.ctorParams.push(p);
