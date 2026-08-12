@@ -58,6 +58,9 @@ class Main {
 
     static function ensureDependency(lib: String): Void {
         var dir = ensureScratchModule();
+        if (lib.endsWith("/...")) {
+            lib = lib.substr(0, lib.length - 4);
+        }
         var cmd = Exec.command("go", "get", lib);
         cmd.dir = dir;
 
