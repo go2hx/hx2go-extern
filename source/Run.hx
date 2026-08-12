@@ -9,11 +9,12 @@ function main() {
     var args = Sys.args();
 
     if (!FileSystem.exists(bin) || (args.length > 0 && args[0] == "rebuild")) {
+        args.shift();
         Sys.println('hx2go-extern building...');
         Sys.command("haxe Compile.hxml");
     }
 
-    Sys.command(bin, [].concat(Sys.args()));
+    Sys.command(bin, [].concat(args));
 }
 
 private function executable(path: String): String {
