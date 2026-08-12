@@ -1,5 +1,6 @@
 typedef GenOutput = {
     ctorParams: Array<String>,
+    ctorValues: Array<String>,
     isStruct: Bool,
     typedefStr: Null<String>,
     consts: StringBuf,

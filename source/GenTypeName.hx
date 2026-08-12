@@ -109,6 +109,7 @@ class GenTypeName {
             out.instanceVars.add('    @:native("${fname}") var ${p};\n');
             if (depth == 0) {
                 out.ctorParams.push(p);
+                out.ctorValues.push(getTypeDefaultValue(field.type()));
             }
         }
 
@@ -122,6 +123,31 @@ class GenTypeName {
                 addStructFieldsRec(est, out, depth + 1, seen);
             }
         }
+    }
+
+    static function getTypeDefaultValue(t:go.go.types.Type):String {
+        t.underlying();
+        var s = "";
+        Syntax.code("switch u := {0}.(type) {", t.underlying());
+        Syntax.code("case *types.Pointer, *types.Slice, *types.Map, *types.Chan, *types.Signature, *types.Interface:"); 
+            s = 'null';
+        Syntax.code("case *types.Basic:");
+            Syntax.code("switch u.Kind() {");
+            Syntax.code("case types.UnsafePointer:");
+                s = "null";
+            Syntax.code("case types.Bool:");
+                s = "false";
+            Syntax.code("case types.String:");
+                s = '""';
+            Syntax.code("case types.Float32, types.Float64:");
+                s = '0.0';
+            Syntax.code("default:");
+                Syntax.code("_ = u");
+                s = "0";
+            Syntax.code("}");
+        Syntax.code("case *types.TypeParam:");
+        Syntax.code("}");
+        return s;
     }
 
     static function embeddedStructType(t: go.go.types.Type): go.go.types.Type {

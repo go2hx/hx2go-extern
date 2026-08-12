@@ -274,6 +274,7 @@ class Main {
                     isInterface: false,
                     isStruct: false,
                     ctorParams: [],
+                    ctorValues: [],
                     typedefStr: null
                 };
             }
@@ -409,7 +410,15 @@ class Main {
                 buf.add(out.instanceVars.toString());
                 if (out.staticVars.length > 0 || out.instanceVars.length > 0) buf.add('\n');
                 if (out.ctorParams.length > 0) {
-                    buf.add('    function new(${out.ctorParams.join(", ")});\n\n');
+                    var ctorParams = out.ctorParams.copy();
+                    for (i in 0...ctorParams.length) {
+                        var value = out.ctorValues[i];
+                        if (value == "") {
+                            continue;
+                        }
+                        ctorParams[i] += "=" + value;
+                    }
+                    buf.add('    function new(${ctorParams.join(", ")});\n\n');
                 }
 
                 buf.add(out.staticFunctions.toString());
