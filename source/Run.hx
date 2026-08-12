@@ -9,7 +9,7 @@ function main() {
     var args = Sys.args();
 
     if (!FileSystem.exists(bin) || (args.length > 0 && args[0] == "rebuild")) {
-        Sys.println('hx2go-extern has not been built yet, doing so now');
+        Sys.println('hx2go-extern building...');
         Sys.command("haxe Compile.hxml");
     }
 
