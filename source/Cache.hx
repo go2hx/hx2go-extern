@@ -1,4 +1,4 @@
-import haxe.crypto.Sha256;
+import haxe.crypto.Md5;
 import sys.io.File;
 import go.Pointer;
 import go.golang_org.x.tools.go.packages.Package;
@@ -6,11 +6,11 @@ import go.golang_org.x.tools.go.packages.Package;
 class Cache {
     public static function getPackageCheckSum(entry:Pointer<Package>):String {
         var checksums = [for (file in entry.goFiles) {
-            Sha256.encode(File.getContent(file));
+            Md5.encode(File.getContent(file));
         }];
         checksums.sort((a, b) -> {
             return a > b ? -1 : 1;
         });
-        return Sha256.encode(checksums.join("$|"));
+        return Md5.encode(checksums.join("$|"));
     }
 }
