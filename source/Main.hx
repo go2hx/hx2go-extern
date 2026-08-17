@@ -388,7 +388,8 @@ class Main {
             if (out.isStruct == true) {
                 buf.add('@:structInit\n'); // TODO: generate constructor where everything is optional
             }
-            buf.add('@:go.Type({ name: "${file}", instanceName: "${lib.split("/").pop()}.${file}", imports: ["${lib}"] })\n');
+            var packageName = entry.value.name;
+            buf.add('@:go.Type({ name: "${file}", instanceName: "${packageName}.${file}", imports: ["${lib}"] })\n');
             buf.add('extern ${out.isInterface || out.typedefStr != null ? "typedef" : "class"} ${className}${out.paramStr}${out.isInterface || out.typedefStr != null ? " = " : " "}');
 
             if (out.typedefStr != null) {
