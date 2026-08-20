@@ -1,6 +1,7 @@
 import sys.io.File;
 import sys.FileSystem;
 import haxe.io.Path;
+import haxe.crypto.Md5;
 import go.Syntax;
 import go.Map;
 using StringTools;
@@ -185,13 +186,25 @@ class Main {
     }
 
     static function genLibs(libs: Array<String>, output: String): Void {
+        var loadDir = ensureScratchModule();
+
+        var cachePath = Path.join([output, ".hx2go_extern_cache"]);
+        var topLevelOut = Path.join([output, topLevelName]);
+        var preKey = topLevelCacheKey(libs, loadDir);
+        if (preKey != null && FileSystem.exists(topLevelOut)) {
+            var prev = FileSystem.exists(cachePath) ? File.getContent(cachePath) : "";
+            if (prev == preKey) {
+                return;
+            }
+        }
+
         for (lib in libs) {
             if (lib.split("/")[0].contains(".")) {
                 ensureDependency(lib);
             }
         }
+        var cacheKey = topLevelCacheKey(libs, loadDir);
 
-        var loadDir = ensureScratchModule();
         var config: Config = {
             mode: Syntax.code('packages.NeedName | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedSyntax | packages.NeedFiles | packages.NeedDeps'),
             dir: loadDir,
@@ -222,6 +235,25 @@ class Main {
                 genPackage(all[lib], output);
             }
         }
+
+        if (cacheKey != null) {
+            Os.mkdirAll(output, Syntax.code("0775")).sure();
+            File.saveContent(cachePath, cacheKey);
+        }
+    }
+    
+    static function topLevelCacheKey(libs: Array<String>, loadDir: String): String {
+        var goMod = Path.join([loadDir, "go.mod"]);
+        var goSum = Path.join([loadDir, "go.sum"]);
+        if (!FileSystem.exists(goMod)) {
+            return null;
+        }
+        var sorted = libs.copy();
+        sorted.sort((a, b) -> a < b ? -1 : (a > b ? 1 : 0));
+        var parts = [sorted.join("\n")];
+        parts.push(Md5.encode(File.getContent(goMod)));
+        parts.push(FileSystem.exists(goSum) ? Md5.encode(File.getContent(goSum)) : "");
+        return Md5.encode(parts.join("$|"));
     }
 
     static function collectPkgs(entry: Pointer<Package>, all: Map<String, Pointer<Package>>): Void {
@@ -335,7 +367,7 @@ class Main {
                 var name = c.name();
                 var type = c.type();
 
-                buf.add('    @:native("${name}") static var ${Sanitize.name(name)}: ${genType(type)};\n');
+                buf.add('    @:native("${name}") static var ${Sanitize.name(toHaxeCaseWithUnderscore(name))}: ${genType(type)};\n');
             }
 
             Syntax.code("default:"); {
