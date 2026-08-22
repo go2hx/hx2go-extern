@@ -23,7 +23,7 @@ import go.Bufio;
 import go.bufio.Scanner;
 import go.Strings;
 import go.encoding.Hex;
-import go.crypto.Sha256;
+import go.crypto.Sha256_;
 
 function handler(w: ResponseWriter, req: Pointer<Request>): Void {
     var buf = new StringBuf();
