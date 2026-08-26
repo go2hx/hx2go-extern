@@ -213,7 +213,7 @@ class Main {
             overlay: null,
             logf: null,
             fset: null,
-            env: null,
+            env: Os.environ().append("CGO_ENABLED=1"),
             context: null,
             buildFlags: null,
         };
