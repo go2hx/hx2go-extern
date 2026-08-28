@@ -38,6 +38,7 @@ class Main {
 
     public static var topLevelName: String = "go";
     public static var scratchDir: String = null;
+    public static var currentLib: String = null;
     
 
     static function ensureScratchModule(): String {
@@ -295,6 +296,7 @@ class Main {
 
     static function genPackage(entry: Pointer<Package>, output: String): Void {
         var lib = entry.value.pkgPath;
+        currentLib = lib;
 
         // skip regenerating an already existing package
         var checkSumPath = Path.join([getPackageDir(output, topLevelName, lib), ".hx2go_cache"]);
@@ -510,7 +512,7 @@ class Main {
                     name = 'p${unnamed++}';
                 }
 
-                names.push('"$name"');
+                names.push('"${Sanitize.name(name)}"');
             }
 
             meta = '@:go.Tuple(${names.join(", ")}) ';
@@ -587,6 +589,13 @@ class Main {
 
         return '${topLevelName}.${Sanitize.packagePath(fullPkgPath)}.${haxeTypeName(fullPkgPath, typeName)}';
     }
+    
+    static function qualifyString(): String {
+        if (currentLib != null && libGeneratesTypeName(currentLib, "String")) {
+            return "std.String";
+        }
+        return "String";
+    }
 
     public static function genType(t: go.go.types.Type): String {
         var s = t.string();
@@ -637,7 +646,7 @@ class Main {
 
         var q = switch s {
             case "error": "go.Error";
-            case "string": "String";
+            case "string": qualifyString();
             case "bool": "Bool";
             case "any": "Dynamic";
 

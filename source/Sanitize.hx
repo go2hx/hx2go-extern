@@ -51,11 +51,32 @@ class Sanitize {
     ];
 
     public static function name(name: String): String {
+        name = fixIdent(name);
         return if (sanitizeList.contains(name)) {
             "_" + name;
         }else{
             name;
         }
+    }
+
+    // deterministic and collision free unicode to asci by way of hex
+    public static function fixIdent(s: String): String {
+        var buf = new StringBuf();
+        for (i in 0...s.length) {
+            var c = StringTools.fastCodeAt(s, i);
+            var isLower = c >= "a".code && c <= "z".code;
+            var isUpper = c >= "A".code && c <= "Z".code;
+            var isDigit = c >= "0".code && c <= "9".code;
+            var ok = isLower || isUpper || c == "_".code || (i > 0 && isDigit);
+            if (ok) {
+                buf.addChar(c);
+            } else {
+                buf.add("_u");
+                buf.add(StringTools.hex(c));
+            }
+        }
+        var r = buf.toString();
+        return r == "" ? "_" : r;
     }
 
     public static function segment(seg: String): String {

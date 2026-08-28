@@ -15,6 +15,8 @@ class GenTypeName {
             resolvedTo = named.underlying();
         }
 
+        out.paramStr = typeParamsStr(type.type());
+
         if (TypeHelper.isInterfaceType(underlying)) {
             var iface = TypeHelper.typeAs(underlying, Interface);
             out.isInterface = true;
@@ -56,17 +58,7 @@ class GenTypeName {
 
                 var tp = named.typeParams();
                 if (tp != null) {
-                    var params = [];
-                    var tps = tp.value;
-
-                    for (i in 0...tps.len()) {
-                        var t = tps.at(i).value;
-                        var constraint = t.constraint();
-                        var constraintStr = Main.genType(constraint);
-                        params.push('${t.string()}: ${constraintStr}');
-                    }
-
-                    out.paramStr = params.length == 0 ? "" : "<" + params.join(", ") + ">";
+                    out.paramStr = typeParamsStr(type.type());
                 }
 
                 for (i in 0...methodSet.len()) {
@@ -82,6 +74,26 @@ class GenTypeName {
                 }
             }
         }
+    }
+
+    static function typeParamsStr(t: go.go.types.Type): String {
+        if (!TypeHelper.isNamedType(t)) {
+            return "";
+        }
+        var named = TypeHelper.typeAs(t, Named);
+        var tp = named.typeParams();
+        if (tp == null) {
+            return "";
+        }
+        var params = [];
+        var tps = tp.value;
+        for (i in 0...tps.len()) {
+            var p = tps.at(i).value;
+            var constraint = p.constraint();
+            var constraintStr = Main.genType(constraint);
+            params.push('${p.string()}: ${constraintStr}');
+        }
+        return params.length == 0 ? "" : "<" + params.join(", ") + ">";
     }
 
     static function addStructFields(t: go.go.types.Type, out: GenOutput, seen: Map<String, Bool>) {
