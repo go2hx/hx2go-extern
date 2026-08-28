@@ -5,6 +5,7 @@ import go.Map;
 class GenTypeName {
     public static function gen(obj:Object, getOutput:String->GenOutput) {
         var type = TypeHelper.typeAs(obj, TypeName);
+        var typeName = obj.name();
 
         var out = getOutput(obj.name());
         var underlying = TypeHelper.getUnderlying(type.type());
@@ -30,6 +31,7 @@ class GenTypeName {
                 }
 
                 var sig = method.signature().value;
+                out.instanceFunctions.add(Main.docComment(Main.getDoc(typeName, method.name()), '    '));
                 out.instanceFunctions.add('    ${Main.genFunc(method.name(), sig, false, false)}\n');
             }
         } else {
@@ -70,6 +72,7 @@ class GenTypeName {
                     }
 
                     var sig = method.signature().value;
+                    out.instanceFunctions.add(Main.docComment(Main.getDoc(typeName, method.name()), '    '));
                     out.instanceFunctions.add('    ${Main.genFunc(method.name(), sig, false)}\n');
                 }
             }

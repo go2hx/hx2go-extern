@@ -23,6 +23,10 @@ import go.golang_org.x.tools.go.Packages;
 import go.golang_org.x.tools.go.packages.Package;
 import go.golang_org.x.tools.go.packages.Config;
 import go.golang_org.x.tools.go.packages.LoadMode;
+
+import go.go.Doc;
+import go.go.doc.Value as DocValue;
+import go.go.doc.Func as DocFunc;
 import go.Pointer;
 import go.Os;
 import go.os.exec.Cmd;
@@ -39,7 +43,85 @@ class Main {
     public static var topLevelName: String = "go";
     public static var scratchDir: String = null;
     public static var currentLib: String = null;
-    
+
+    // documentation for the current package, keyed by name (see docKey), rebuilt per package
+    public static var docPackage: String = "";
+    public static var docs: Map<String, String> = new Map();
+
+    static inline function docKey(owner: String, name: String): String {
+        return owner == "" ? name : owner + "." + name;
+    }
+
+    public static function getDoc(owner: String, name: String): String {
+        var k = docKey(owner, name);
+        return docs.exists(k) ? docs[k] : "";
+    }
+
+    public static function docComment(doc: String, indent: String): String {
+        doc = doc == null ? "" : doc.trim();
+        if (doc == "") return "";
+        var buf = new StringBuf();
+        buf.add('${indent}/**\n');
+        for (line in doc.split("\n")) {
+            buf.add('${indent}    ${line.split("*/").join("* /").rtrim()}\n');
+        }
+        buf.add('${indent}**/\n');
+        return buf.toString();
+    }
+
+    static function addDoc(owner: String, name: String, doc: String): Void {
+        if (doc == null || doc.trim() == "") return;
+        docs[docKey(owner, name)] = doc.trim();
+    }
+
+    static function addValueDocs(values: go.Slice<go.Pointer<DocValue>>, owner: String): Void {
+        if (values == null) return;
+        for (i in 0...values.length) {
+            var v = values[i].value;
+            if (v.names == null) continue;
+            for (n in 0...v.names.length) addDoc(owner, v.names[n], v.doc);
+        }
+    }
+
+    static function addFuncDocs(funcs: go.Slice<go.Pointer<DocFunc>>, owner: String): Void {
+        if (funcs == null) return;
+        for (i in 0...funcs.length) {
+            var f = funcs[i].value;
+            addDoc(owner, f.name, f.doc);
+        }
+    }
+
+    static function buildDocIndex(entry: Pointer<Package>): Void {
+        docPackage = "";
+        docs = new Map();
+
+        var files = entry.value.syntax;
+        var fset = entry.value.fset;
+        if (files == null || fset == null) return;
+
+        var pkgPtr = Doc.newFromFiles(fset, files, entry.value.pkgPath).tuple().result;
+        if (pkgPtr == null) return;
+        var pkg = pkgPtr.value;
+
+        docPackage = pkg.doc == null ? "" : pkg.doc.trim();
+
+        addFuncDocs(pkg.funcs, "");
+        addValueDocs(pkg.consts, "");
+        addValueDocs(pkg.vars, "");
+
+        if (pkg.types != null) {
+            for (i in 0...pkg.types.length) {
+                var t = pkg.types[i].value;
+                addDoc("", t.name, t.doc);
+                // consts/vars/funcs grouped under a type declaration
+                addValueDocs(t.consts, "");
+                addValueDocs(t.vars, "");
+                addFuncDocs(t.funcs, "");
+                addFuncDocs(t.methods, t.name);
+            }
+        }
+    }
+
 
     static function ensureScratchModule(): String {
         if (scratchDir != null) return scratchDir;
@@ -310,6 +392,8 @@ class Main {
         }
         Sys.println('generating "$lib"');
 
+        buildDocIndex(entry);
+
         var outputs: Map<String, GenOutput> = new Map();
 
         function getOutput(name: String): GenOutput {
@@ -358,6 +442,7 @@ class Main {
                 var results = sig.results()?.value ?? null;
                 var varadic = sig.variadic();
 
+                buf.add(docComment(getDoc("", name), '    '));
                 buf.add('    ' + genFunc(name, sig, recv == null) + '\n');
             }
 
@@ -374,6 +459,7 @@ class Main {
                 var name = v.name();
                 var type = v.type();
 
+                buf.add(docComment(getDoc("", name), '    '));
                 buf.add('    @:native("${name}") static var ${Sanitize.name(toHaxeCaseWithUnderscore(name))}: ${genType(type)};\n');
             }
 
@@ -389,6 +475,7 @@ class Main {
                 var name = c.name();
                 var type = c.type();
 
+                buf.add(docComment(getDoc("", name), '    '));
                 buf.add('    @:native("${name}") static var ${Sanitize.name(toHaxeCaseWithUnderscore(name))}: ${genType(type)};\n');
             }
 
@@ -439,6 +526,8 @@ class Main {
 
             buf.add('package $pkgName;\n');
             buf.add('\n');
+            var declDoc = isPkg ? docPackage : getDoc("", file);
+            buf.add(docComment(declDoc, ''));
             if (out.isStruct == true) {
                 buf.add('@:structInit\n'); // TODO: generate constructor where everything is optional
             }
