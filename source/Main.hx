@@ -185,6 +185,33 @@ class Main {
         return className;
     }
 
+    static function isGeneratableType(t: go.go.types.Type): Bool {
+        if (TypeHelper.isNamedType(t)) {
+            var named = TypeHelper.typeAs(t, Named);
+            if (named.obj().value.exported()) {
+                return true;
+            }
+            var pkg = named.obj().value.pkg();
+            return pkg != null && willGenerate(pkg.value.path());
+        }
+
+        var s = t.string();
+
+        if (s.startsWith("*")) {
+            return isGeneratableType(TypeHelper.typeAs(t, PointerType).elem());
+        }
+
+        if (s.startsWith("[]")) {
+            return isGeneratableType(TypeHelper.typeAs(t, SliceType).elem());
+        }
+
+        if (s.startsWith("chan ")) {
+            return isGeneratableType(TypeHelper.typeAs(t, ChanType).elem());
+        }
+
+        return true;
+    }
+
     static function genLibs(libs: Array<String>, output: String): Void {
         var loadDir = ensureScratchModule();
 
@@ -205,19 +232,12 @@ class Main {
         }
         var cacheKey = topLevelCacheKey(libs, loadDir);
 
-        var config: Config = {
-            mode: Syntax.code('packages.NeedName | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedSyntax | packages.NeedFiles | packages.NeedDeps'),
-            dir: loadDir,
-            tests: false,
-            parseFile: null,
-            overlay: null,
-            logf: null,
-            fset: null,
-            env: Os.environ().append("CGO_ENABLED=1"),
-            context: null,
-            buildFlags: null,
-        };
-        var configPtr: Pointer<Config> = config;
+        // temp work around for func fields (Logf, ParseFile) hitting a wrong nil cast
+        var configPtr: Pointer<Config> = null;
+        Syntax.code(
+            "{0} = &packages.Config{ Mode: packages.NeedName | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedSyntax | packages.NeedFiles | packages.NeedDeps, Dir: {1}, Tests: false, Env: append(os.Environ(), \"CGO_ENABLED=1\") }",
+            configPtr, loadDir
+        );
 
         var entries = Packages.load(configPtr, ...libs).sure();
 
@@ -344,7 +364,7 @@ class Main {
                     continue;
                 }
                 var v = TypeHelper.typeAs(obj, Var);
-                if (!TypeHelper.isExportedType(v.type())) {
+                if (!isGeneratableType(v.type())) {
                     continue;
                 }
 
