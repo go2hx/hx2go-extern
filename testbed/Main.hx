@@ -7,7 +7,7 @@ import go.Bytes;
 import go.Pointer;
 import go.Map;
 import go.Os;
-import go.Image_ as Image;
+import go.Image;
 import go.bytes.Buffer;
 import go.image.Png;
 import go.image.color.RGBA;
