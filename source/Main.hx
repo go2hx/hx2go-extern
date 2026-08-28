@@ -213,6 +213,9 @@ class Main {
     
     // handle net/http.CookieJar and net/http/cookiejar
     static var scopeNames: Map<String, Array<String>> = new Map();
+    
+    static var haxeTypeNameCache: Map<String, String> = new Map();
+    static var libGeneratesTypeNameCache: Map<String, Bool> = new Map();
 
     static function parentPath(lib: String): String {
         var idx = lib.lastIndexOf("/");
@@ -239,13 +242,20 @@ class Main {
         if (names == null) {
             return false;
         }
+        var cacheKey = lib + "\t" + className;
+        if (libGeneratesTypeNameCache.exists(cacheKey)) {
+            return libGeneratesTypeNameCache[cacheKey];
+        }
         var key = className.toLowerCase();
+        var result = false;
         for (name in names) {
             if (haxeTypeName(lib, name).toLowerCase() == key) {
-                return true;
+                result = true;
+                break;
             }
         }
-        return false;
+        libGeneratesTypeNameCache[cacheKey] = result;
+        return result;
     }
 
     // http.http2ClientConnPool vs http.http2clientConnPool)
@@ -256,6 +266,10 @@ class Main {
         if (names == null) {
             return className;
         }
+        var cacheKey = lib + "\t" + name;
+        if (haxeTypeNameCache.exists(cacheKey)) {
+            return haxeTypeNameCache[cacheKey];
+        }
         var key = className.toLowerCase();
         for (other in names) {
             if (other == name) {
@@ -265,6 +279,7 @@ class Main {
                 className += "_";
             }
         }
+        haxeTypeNameCache[cacheKey] = className;
         return className;
     }
 
