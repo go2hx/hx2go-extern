@@ -86,10 +86,10 @@ class Sanitize {
     }
 
     public static function packagePath(path: String): String {
-        return path.split("/").map(Sanitize.segment).join(".");
+        return path.split("/").map(Sanitize.segment).join(".").toLowerCase();
     }
 
     public static function packageDir(path: String): String {
-        return path.split("/").map(Sanitize.segment).join("/");
+        return path.split("/").map(Sanitize.segment).join("/").toLowerCase();
     }
 }
