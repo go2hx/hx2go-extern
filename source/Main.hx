@@ -333,7 +333,7 @@ class Main {
         // temp work around for func fields (Logf, ParseFile) hitting a wrong nil cast
         var configPtr: Pointer<Config> = null;
         Syntax.code(
-            "{0} = &packages.Config{ Mode: packages.NeedName | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedSyntax | packages.NeedFiles | packages.NeedDeps, Dir: {1}, Tests: false, Env: append(os.Environ(), \"CGO_ENABLED=1\") }",
+            "{0} = &packages.Config{ Mode: packages.NeedName | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedSyntax | packages.NeedFiles | packages.NeedImports | packages.NeedDeps, Dir: {1}, Tests: false, Env: append(os.Environ(), \"CGO_ENABLED=1\") }",
             configPtr, loadDir
         );
 
