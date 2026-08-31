@@ -143,6 +143,7 @@ class GenTypeName {
     static function getTypeDefaultValue(t:go.go.types.Type):String {
         var isNamed = false;
         Syntax.code("if _, ok := {0}.(*types.Named); ok { {1} = true }", t, isNamed);
+        Syntax.code("if _, ok := {0}.(*types.Alias); ok { {1} = true }", t, isNamed);
 
         t.underlying();
         var s = "";
