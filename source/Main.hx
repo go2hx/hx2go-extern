@@ -194,7 +194,8 @@ class Main {
         // last arg is the output directory
         Sys.setCwd(args.pop());
         var output = args.pop();
-        initLibs = args;
+        // add wildcard import to every import
+        initLibs = args.map(lib -> lib.endsWith("/...") ? lib : lib + "/...");
         genLibs(initLibs.copy(), output);
     }
 
