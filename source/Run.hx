@@ -8,7 +8,7 @@ function main() {
 
     var args = Sys.args();
 
-    if (!FileSystem.exists(bin) || (args.length > 0 && args[0] == "rebuild")) {
+    if (!FileSystem.exists(bin) || (args.length > 0 && (args[0] == "rebuild" || args[0] == "go-rebuild")) {
         args.shift();
         Sys.println('hx2go-extern building...');
         Sys.command("haxe Compile.hxml");
