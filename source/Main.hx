@@ -710,6 +710,11 @@ class Main {
         var typeName = rest.substr(dotIdx + 1);
         var fullPkgPath = pkgPath.length > 0 ? '${pkgPath}/${pkgBase}' : pkgBase;
 
+        // excluded packages that are derived from non excluded ones, are treated as Dynamic
+        if (!willGenerate(fullPkgPath)) {
+            return "Dynamic";
+        }
+
         return '${topLevelName}.${Sanitize.packagePath(fullPkgPath)}.${haxeTypeName(fullPkgPath, typeName)}';
     }
     
