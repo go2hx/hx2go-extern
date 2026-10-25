@@ -176,6 +176,7 @@ class Main {
 
     static var initLibs = [];
     static var stdGenBool = false;
+    static var fileBool = false;
 
     public static function main() {
         var args = Sys.args();
@@ -183,17 +184,31 @@ class Main {
             Sys.println("Usage: hx2go-extern <lib>... <output>");
             Sys.exit(1);
         }
-        for (arg in args) {
+        for (arg in args.copy()) {
             switch arg {
                 case "-stdgen", "--stdgen":
                     stdGenBool = true;
                     Sys.println("stdgen enabled");
+                    args.remove(arg);
+                case "-genfile", "--genfile":
+                    fileBool = true;
+                    Sys.println("reading a file for the args");
                     args.remove(arg);
             }
         }
         // last arg is the output directory
         Sys.setCwd(args.pop());
         var output = args.pop();
+        // pull args from a file
+        if (fileBool) {
+            if (args.length > 1) {
+                Sys.println("make sure to only pass one arg after -file");
+            }
+            trace("loading file gen : " + args[0]);
+            args = File.getContent(args[0]).split("\n");
+            // remove version info
+            args.shift();
+        }
         // add wildcard import to every import
         initLibs = args.map(lib -> lib.endsWith("/...") ? lib : lib + "/...");
         genLibs(initLibs.copy(), output);
@@ -201,6 +216,9 @@ class Main {
 
     public static function willGenerate(lib: String): Bool {
         var parts = lib.split("/");
+        if (parts.length > 0 && parts[0] == "syscall") {
+            return false;
+        }
         if (parts.contains("internal")) {
             return false;
         }
