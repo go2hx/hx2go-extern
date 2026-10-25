@@ -199,7 +199,6 @@ class Main {
                     args.remove(arg);
                 case "-genfile", "--genfile":
                     fileBool = true;
-                    Sys.println("reading a file for the args");
                     args.remove(arg);
             }
         }
