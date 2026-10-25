@@ -177,6 +177,8 @@ class Main {
     static var initLibs = [];
     static var stdGenBool = false;
     static var fileBool = false;
+    static var genFilePath: String = null;
+    static var excludeLibs: Map<String, Bool> = new Map();
 
     public static function main() {
         var args = Sys.args();
@@ -185,6 +187,11 @@ class Main {
             Sys.exit(1);
         }
         for (arg in args.copy()) {
+            if (fileBool && genFilePath == null) {
+                genFilePath = arg;
+                args.remove(arg);
+                continue;
+            }
             switch arg {
                 case "-stdgen", "--stdgen":
                     stdGenBool = true;
@@ -201,13 +208,21 @@ class Main {
         var output = args.pop();
         // pull args from a file
         if (fileBool) {
-            if (args.length > 1) {
-                Sys.println("make sure to only pass one arg after -file");
+            var lines = File.getContent(genFilePath).split("\n");
+            // first line is a version marker
+            lines.shift();
+            var libs = [];
+            for (line in lines) {
+                var lib = StringTools.trim(line);
+                if (lib == "" || lib.startsWith("#")) continue;
+                libs.push(lib);
             }
-            trace("loading file gen : " + args[0]);
-            args = File.getContent(args[0]).split("\n");
-            // remove version info
-            args.shift();
+            if (stdGenBool) {
+                // generate every package
+                args = libs;
+            } else {
+                for (lib in libs) excludeLibs[lib] = true;
+            }
         }
         // add wildcard import to every import
         initLibs = args.map(lib -> lib.endsWith("/...") ? lib : lib + "/...");
@@ -215,6 +230,9 @@ class Main {
     }
 
     public static function willGenerate(lib: String): Bool {
+        if (excludeLibs.exists(lib)) {
+            return false;
+        }
         var parts = lib.split("/");
         if (stdGenBool && parts.length > 0 && parts[0] == "syscall") {
             return false;
