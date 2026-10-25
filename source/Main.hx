@@ -216,7 +216,7 @@ class Main {
 
     public static function willGenerate(lib: String): Bool {
         var parts = lib.split("/");
-        if (parts.length > 0 && parts[0] == "syscall") {
+        if (stdGenBool && parts.length > 0 && parts[0] == "syscall") {
             return false;
         }
         if (parts.contains("internal")) {
