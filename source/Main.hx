@@ -580,7 +580,7 @@ class Main {
             var declDoc = isPkg ? docPackage : getDoc("", file);
             buf.add(docComment(declDoc, ''));
             if (out.isStruct == true) {
-                buf.add('@:structInit\n'); // TODO: generate constructor where everything is optional
+                buf.add('@:structInit\n');
             }
             var packageName = entry.value.name;
             buf.add('@:go.Type({ name: "${file}", instanceName: "${packageName}.${file}", imports: ["${lib}"] })\n');

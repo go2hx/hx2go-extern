@@ -41,7 +41,7 @@ function handler(w: ResponseWriter, req: Pointer<Request>): Void {
 }
 
 function httpTest() {
-    // TODO use Haxe version when @:structInit has default values for externs
+    var server:Server = {addr: ":8080"};
     var server:Pointer<Server> = Syntax.code('&http.Server{Addr: ":8080"}');
     Syntax.go(() -> {
         Sys.sleep(1);
