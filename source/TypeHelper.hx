@@ -89,6 +89,18 @@ class TypeHelper {
         return result;
     }
 
+    public static function isSignature(t:go.go.types.Type):Bool {
+        var result = false;
+
+        Syntax.code("
+        if _, ok := t.(*types.Signature); ok {
+            result = true;
+        }
+    ");
+
+        return result;
+    }
+
     public static function isStructType(t:go.go.types.Type):Bool {
         var result = false;
 

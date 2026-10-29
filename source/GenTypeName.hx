@@ -35,7 +35,7 @@ class GenTypeName {
                 out.instanceFunctions.add('    ${Main.genFunc(method.name(), sig, false, false)}\n');
             }
         } else {
-            if (type.isAlias() && (TypeHelper.isNamedType(resolvedTo) || TypeHelper.isBasicType(resolvedTo))) { // TODO: support for func() aswell (see iter.Seq)
+            if (type.isAlias() && (TypeHelper.isNamedType(resolvedTo) || TypeHelper.isBasicType(resolvedTo)) || TypeHelper.isSignature(resolvedTo)) {
                 out.typedefStr = Main.genType(resolvedTo);
             }
             var isNamed = TypeHelper.isNamedType(type.type());
