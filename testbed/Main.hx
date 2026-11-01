@@ -1,3 +1,4 @@
+import go.Slices;
 import go.net.http.Server;
 import go.net.http.ResponseWriter;
 import go.net.http.Request;
@@ -107,6 +108,10 @@ function tcpServer() {
     }
 }
 
+function slices() {
+    trace(Slices.compare([1, 2, 3], [3 , 2, 1]));
+}
+
 function tcpClient() {
     var conn = Net.dial("tcp", "localhost:9000").sure();
     conn.write("hello go2hx");
@@ -159,4 +164,5 @@ function main() {
     hashTest();
     scannerTest();
     httpTest();
+    slices();
 }
