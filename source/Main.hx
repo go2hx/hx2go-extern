@@ -140,6 +140,13 @@ class Main {
         return dir;
     }
 
+    static function stripVersionQuery(lib: String): String {
+        var at = lib.indexOf("@");
+        if (at == -1) return lib;
+        var slash = lib.indexOf("/", at);
+        return slash == -1 ? lib.substr(0, at) : lib.substr(0, at) + lib.substr(slash);
+    }
+
     static function ensureDependency(lib: String): Void {
         var dir = ensureScratchModule();
         if (lib.endsWith("/...")) {
@@ -373,7 +380,9 @@ class Main {
             configPtr, loadDir
         );
 
-        var entries = Packages.load(configPtr, ...libs).sure();
+        // go get accepts module@version, but Packages.load does not
+        var loadLibs = libs.map(stripVersionQuery);
+        var entries = Packages.load(configPtr, ...loadLibs).sure();
 
         var all: Map<String, Pointer<Package>> = new Map();
         for (entry in entries) {
