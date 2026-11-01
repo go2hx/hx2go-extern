@@ -678,7 +678,7 @@ class Main {
             for (i in 0...tParams.len()) {
                 var t = tParams.at(i).value;
                 var constraint = t.constraint();
-                if (TypeHelper.isTypeSetConstraint(constraint)) {
+                if (TypeHelper.isTypeSetConstraint(constraint) && !TypeHelper.isComparableConstraint(constraint)) {
                     tParamsLocal.push(toPascalCase(t.string()));
                 } else {
                     var constraintStr = genType(constraint);

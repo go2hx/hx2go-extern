@@ -161,4 +161,8 @@ class TypeHelper {
     ");
         return result;
     }
+
+    public static function isComparableConstraint(t:go.go.types.Type):Bool {
+        return t.string() == "comparable";
+    }
 }
