@@ -124,4 +124,41 @@ class TypeHelper {
 
         return result;
     }
+
+    public static function typeParamSliceElem(t:go.go.types.Type):Null<go.go.types.Type> {
+        var elem:go.go.types.Type = null;
+        Syntax.code("
+        if tp, ok := t.(*types.TypeParam); ok {
+            if iface, ok := tp.Constraint().Underlying().(*types.Interface); ok {
+                if iface.NumEmbeddeds() == 1 {
+                    switch u := iface.EmbeddedType(0).(type) {
+                    case *types.Slice:
+                        elem = u.Elem()
+                    case *types.Union:
+                        if u.Len() == 1 {
+                            if sl, ok := u.Term(0).Type().Underlying().(*types.Slice); ok {
+                                elem = sl.Elem()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    ");
+        return elem;
+    }
+
+    // True when a type param's constraint is a Go type-set (a method-less union
+    // like `~int | ~string`, `comparable`, or `cmp.Ordered`) rather than a normal
+    // method interface. Haxe can't model type-sets and Go enforces them natively,
+    // so the generator emits such params unconstrained.
+    public static function isTypeSetConstraint(t:go.go.types.Type):Bool {
+        var result = false;
+        Syntax.code("
+        if iface, ok := t.Underlying().(*types.Interface); ok {
+            result = !iface.IsMethodSet()
+        }
+    ");
+        return result;
+    }
 }

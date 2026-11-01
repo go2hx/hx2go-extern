@@ -669,9 +669,12 @@ class Main {
             for (i in 0...tParams.len()) {
                 var t = tParams.at(i).value;
                 var constraint = t.constraint();
-                var constraintStr = genType(constraint);
-
-                tParamsLocal.push('${toPascalCase(t.string())}: ${constraintStr}');
+                if (TypeHelper.isTypeSetConstraint(constraint)) {
+                    tParamsLocal.push(toPascalCase(t.string()));
+                } else {
+                    var constraintStr = genType(constraint);
+                    tParamsLocal.push('${toPascalCase(t.string())}: ${constraintStr}');
+                }
             }
             tParamsStr = '<' + tParamsLocal.join(", ") + '>';
         }
@@ -847,13 +850,20 @@ class Main {
                 'go.GoArray<${genType(arr.elem())}, ${arr.len()}>';
             }
 
-            case _ if (TypeHelper.isTypeParamType(t)): toPascalCase(s);
+            case _ if (TypeHelper.isTypeParamType(t)): {
+                var sliceElem = TypeHelper.typeParamSliceElem(t);
+                if (sliceElem != null) {
+                    'go.Slice<${genType(sliceElem)}>';
+                } else {
+                    toPascalCase(s);
+                }
+            }
             case _ if (s.contains(".")): resolvePath(s);
             case _: s;
         }
 
         if (q.charAt(0) == "~") {
-            q = "Dynamic"; // Todo: ~T[] -> go.Slice<Dynamic> and not go.Slice<T>
+            q = "Dynamic";
         }
 
         return q + tParamStr;
