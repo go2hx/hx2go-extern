@@ -173,6 +173,7 @@ class Main {
     }
 
     public static function toPascalCase(input: String): String {
+        input = Sanitize.fixIdent(input);
         var first = input.charAt(0);
         var isLetter = (first >= "a" && first <= "z") || (first >= "A" && first <= "Z");
         if (!isLetter) {
@@ -734,7 +735,7 @@ class Main {
         var lastSlash = path.lastIndexOf("/");
         var pkgPath = lastSlash == -1 ? "" : path.substr(0, lastSlash);
         var rest = lastSlash == -1 ? path : path.substr(lastSlash + 1);
-        var dotIdx = rest.indexOf(".");
+        var dotIdx = rest.lastIndexOf(".");
         var pkgBase = rest.substr(0, dotIdx);
         var typeName = rest.substr(dotIdx + 1);
         var fullPkgPath = pkgPath.length > 0 ? '${pkgPath}/${pkgBase}' : pkgBase;
