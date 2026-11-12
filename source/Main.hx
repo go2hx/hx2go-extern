@@ -749,9 +749,16 @@ class Main {
     }
     
     static function qualifyString(): String {
-        if (currentLib != null && libGeneratesTypeName(currentLib, "String")) {
-            return "std.String";
+        var lib = currentLib;
+        while (lib != null && lib != "") {
+            if (libGeneratesTypeName(lib, "String")) {
+                return "std.String";
+            }
+
+            var slash = lib.lastIndexOf("/");
+            lib = slash == -1 ? null : lib.substr(0, slash);
         }
+        
         return "String";
     }
 
