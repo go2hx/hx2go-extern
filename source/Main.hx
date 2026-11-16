@@ -763,6 +763,10 @@ class Main {
     }
 
     public static function genType(t: go.go.types.Type): String {
+        if (TypeHelper.isAliasType(t) && TypeHelper.typeAs(t, Alias).typeArgs() != null) {
+            t = go.go.Types.unalias(t);
+        }
+
         var s = t.string();
         var tParamStr = '';
 

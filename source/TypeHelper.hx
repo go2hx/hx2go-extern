@@ -20,6 +20,13 @@ class TypeHelper {
         return isNamed;
     }
 
+    public static function isAliasType(t: go.go.types.Type): Bool {
+        var isAlias = false;
+        Syntax.code("if _, ok := t.(*types.Alias); ok { isAlias = true; }");
+
+        return isAlias;
+    }
+
     public static function isExportedType(t:go.go.types.Type):Bool {
         if (isNamedType(t)) {
             var named = TypeHelper.typeAs(t, Named);

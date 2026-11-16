@@ -80,23 +80,25 @@ class GenTypeName {
     }
 
     static function typeParamsStr(t: go.go.types.Type): String {
-        if (!TypeHelper.isNamedType(t)) {
-            return "";
+        var tp: go.Pointer<go.go.types.TypeParamList> = null;
+        if (TypeHelper.isNamedType(t)) {
+            tp = TypeHelper.typeAs(t, Named).typeParams();
+        } else if (TypeHelper.isAliasType(t)) {
+            tp = TypeHelper.typeAs(t, Alias).typeParams();
         }
-        var named = TypeHelper.typeAs(t, Named);
-        var tp = named.typeParams();
+
         if (tp == null) {
-            return "";
+            return '';
         }
+
         var params = [];
         var tps = tp.value;
         for (i in 0...tps.len()) {
             var p = tps.at(i).value;
-            var constraint = p.constraint();
-            var constraintStr = Main.genType(constraint);
-            params.push('${p.string()}: ${constraintStr}');
+            params.push('${p.string()}: ${Main.genType(p.constraint())}');
         }
-        return params.length == 0 ? "" : "<" + params.join(", ") + ">";
+
+        return params.length == 0 ? '' : '<' + params.join(', ') + '>';
     }
 
     static function addStructFields(t: go.go.types.Type, out: GenOutput, seen: Map<String, Bool>) {
