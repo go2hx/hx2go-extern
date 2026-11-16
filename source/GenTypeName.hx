@@ -94,8 +94,7 @@ class GenTypeName {
         var params = [];
         var tps = tp.value;
         for (i in 0...tps.len()) {
-            var p = tps.at(i).value;
-            params.push('${p.string()}: ${Main.genType(p.constraint())}');
+            params.push(Main.toPascalCase(tps.at(i).value.string()));
         }
 
         return params.length == 0 ? '' : '<' + params.join(', ') + '>';

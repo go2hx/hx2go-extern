@@ -674,18 +674,13 @@ class Main {
 
         var tParams = sig.typeParams() != null ? sig.typeParams().value : null;
         var tParamsStr = '';
+
         if (tParams != null){
             var tParamsLocal = [];
             for (i in 0...tParams.len()) {
-                var t = tParams.at(i).value;
-                var constraint = t.constraint();
-                if (TypeHelper.isTypeSetConstraint(constraint) && !TypeHelper.isComparableConstraint(constraint)) {
-                    tParamsLocal.push(toPascalCase(t.string()));
-                } else {
-                    var constraintStr = genType(constraint);
-                    tParamsLocal.push('${toPascalCase(t.string())}: ${constraintStr}');
-                }
+                tParamsLocal.push(toPascalCase(tParams.at(i).value.string()));
             }
+
             tParamsStr = '<' + tParamsLocal.join(", ") + '>';
         }
         
