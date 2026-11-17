@@ -537,7 +537,7 @@ class Main {
                 var type = c.type();
 
                 buf.add(docComment(getDoc("", name), '    '));
-                buf.add('    @:native("${name}") static var ${Sanitize.name(toHaxeCaseWithUnderscore(name))}: ${genType(type)};\n');
+                buf.add('    @:native("${name}") static final ${Sanitize.name(toHaxeCaseWithUnderscore(name))}: ${genType(type)};\n');
             }
 
             Syntax.code("default:"); {
